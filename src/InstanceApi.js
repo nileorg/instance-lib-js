@@ -11,7 +11,10 @@ module.exports = class InstanceApi {
     }
     onNodeRegister(protocol) {
         if(protocol in this.protocols) {
-            return this.protocols[protocol].on("node.to.instance", "register")
+            return this.protocols[protocol].on("node.to.instance", "register", {
+                channel: "instance.to.node",
+                action: "registered"
+            })
         }
     }
     onNodeConfirm(protocol) {

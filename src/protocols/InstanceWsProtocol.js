@@ -15,11 +15,12 @@ module.exports = class InstanceWsProtocol {
         })
         return confirm()
     }
-    on(channel, action) {
+    on(channel, action, response) {
         return Observable.create((observer) => {
             this.socket.on(channel, data => {
+                const message_id = "uniquemessage_id"
                 if (data.action === action) {
-                    observer((res) => null, data.parameters)
+                    observer.next({ok: (parameters) => this.to(response.channel, response.action, parameters), parameters: data.parameters })
                 }
             })
         })

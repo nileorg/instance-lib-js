@@ -13,11 +13,11 @@ module.exports = class InstanceHttpProtocol {
             }
         })
     }
-    on(channel, action) {
+    on(channel, action, response) {
         return Observable.create((observer) => {
             this.dispatcher.onGet("/" + channel + "/" + action, (req, res) => {
                 res.writeHead(200, {'Content-Type': 'text/html'});
-                observer.next({ok: (msg) => res.end(msg), req, res })
+                observer.next({ok: (parameters) => this.to(response.channel, response.action, parameters), req, res })
             })
         })
     }
