@@ -20,13 +20,15 @@ module.exports = class WsProtocol {
                 parameters: parameters
             })
         }
-        return new Promise(resolve => {
-            this.socket.on(listen.channel, data => {
-                if(data.action === listen.action) {
-                    resolve(data.parameters)
-                }
+        if(listen) {
+            return new Promise(resolve => {
+                this.socket.on(listen.channel, data => {
+                    if(data.action === listen.action) {
+                        resolve(data.parameters)
+                    }
+                })
             })
-        })
+        }
     }
     on(channel, action, response) {
         return Observable.create((observer) => {

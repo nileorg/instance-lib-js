@@ -14,8 +14,10 @@ module.exports = class HttpProtocol {
             })
                 .then(data => data.json())
                 .then(data => {
-                    if(data.channel === listen.channel && data.action === listen.action){
-                        return data
+                    if(listen) {
+                        if(data.channel === listen.channel && data.action === listen.action){
+                            return data
+                        }
                     }
                 })
         }
