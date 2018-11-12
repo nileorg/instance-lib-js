@@ -1,5 +1,5 @@
-const InstanceWsProtocol = require("./protocols/InstanceWsProtocol")
-const InstanceHttpProtocol = require("./protocols/InstanceHttpProtocol")
+const WsProtocol = require("./protocols/WsProtocol")
+const HttpProtocol = require("./protocols/HttpProtocol")
 
 const Instance = require("./Instance")
 const server = require('http').createServer(handleRequest)
@@ -21,8 +21,8 @@ const WS_PROTOCOL = 'ws'
 const HTTP_PROTOCOL = 'http'
 
 let protocols = {}
-protocols[WS_PROTOCOL] = new InstanceWsProtocol(ws)
-protocols[HTTP_PROTOCOL] = new InstanceHttpProtocol(dispatcher)
+protocols[WS_PROTOCOL] = new WsProtocol(ws)
+protocols[HTTP_PROTOCOL] = new HttpProtocol(dispatcher)
 
 let instance = new Instance(protocols)
 

@@ -1,25 +1,31 @@
+const Protocols = require('./Protocols')
+
 module.exports = class InstanceApi {
     constructor(protocols) {
-        this.protocols = protocols
+        this.protocols = new Protocols(protocols)
     }
-    toNodeRegistered(protocol, node) {
-        if(protocol in this.protocols) {
-            return this.protocols[node.protocol].to("instance.to.node", "registered", {
-                token: node.token
-            }, this.onNodeConfirm)
-        }
+    toNodeRegistered(protocol, recipient, parameters) {
+        return this.protocols.to({
+            protocol: protocol,
+            recipient: recipient,
+            channel: "instance.to.node",
+            action: "registered",
+            parameters: parameters,
+            listen: {
+                channel: "node.to.instance",
+                action: "registeredConfirmed"
+            }
+        })
     }
     onNodeRegister(protocol) {
-        if(protocol in this.protocols) {
-            return this.protocols[protocol].on("node.to.instance", "register", {
+        return this.protocols.on({
+            protocol: protocol,
+            channel: "node.to.instance",
+            action: "register",
+            response: {
                 channel: "instance.to.node",
-                action: "registered"
-            })
-        }
-    }
-    onNodeConfirm(protocol) {
-        if(protocol in this.protocols) {
-            return this.protocols[protocol].on("node.to.instance", "confirm")
-        }
+                action: "confirmRegistration"
+            }
+        })
     }
 }

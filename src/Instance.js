@@ -5,11 +5,16 @@ module.exports = class Instance {
         this.api = new InstanceApi(protocols)
     }
     loadListeners(protocol) {
-        this.api.onNodeRegister(protocol).subscribe(this.onRegisterNode)
+        this.api.onNodeRegister(protocol).subscribe(this.onNodeRegister)
     }
-    async onRegisterNode({ ok, parameters }) {
-        ok({
-            msg: "registered"
+    async onNodeRegister({ ok, parameters }) {
+        console.log(parameters)
+        ok({ success: true })
+    }
+    async toNodeRegistered(node) {
+        const registeredConfirmed = await this.api.toNodeRegistered(node.protocol, node.resource, {
+            token: node.token
         })
+        console.log(registeredConfirmed)
     }
 }
