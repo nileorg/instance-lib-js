@@ -5,18 +5,20 @@ module.exports = class HttpProtocol {
         this.dispatcher = dispatcher
     }
     async to(recipient, channel, action, parameters, listen) {
-        fetch(recipient + channel, {
-            body: {
-                action: action,
-                parameters: parameters
-            }
-        })
-            .then(data => data.json())
-            .then(data => {
-                if(data.channel === listen.channel && data.action === listen.action){
-                    return data
+        if(recipient) {
+            fetch(recipient + channel, {
+                body: {
+                    action: action,
+                    parameters: parameters
                 }
             })
+                .then(data => data.json())
+                .then(data => {
+                    if(data.channel === listen.channel && data.action === listen.action){
+                        return data
+                    }
+                })
+        }
     }
     on(channel, action, response) {
         return Observable.create((observer) => {

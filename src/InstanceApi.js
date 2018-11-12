@@ -28,4 +28,36 @@ module.exports = class InstanceApi {
             }
         })
     }
+    onNodeUpdate(protocol) {
+        return this.protocols.on({
+            protocol: protocol,
+            channel: "node.to.instance",
+            action: "update",
+            response: {
+                channel: "instance.to.node",
+                action: "updated"
+            }
+        })
+    }
+    onNodeLogin(protocol) {
+        return this.protocols.on({
+            protocol: protocol,
+            channel: "node.to.instance",
+            action: "login",
+            response: {
+                channel: "instance.to.node",
+                action: "logged"
+            }
+        })
+    }
+    toClientsUpdateNodeList(parameters) {
+        this.protocols.forEach(protocol => {
+            this.protocols.to({
+                protocol: protocol,
+                channel: "instance.to.client",
+                action: "updateOnlineNodes",
+                parameters: parameters
+            })
+        });
+    }
 }

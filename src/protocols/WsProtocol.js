@@ -9,10 +9,17 @@ module.exports = class WsProtocol {
         this.socket = socket
     }
     to(recipient, channel, action, parameters, listen) {
-        this.socket.to(recipient).emit(channel, {
-            action: action,
-            parameters: parameters
-        })
+        if (recipient) {
+            this.socket.to(recipient).emit(channel, {
+                action: action,
+                parameters: parameters
+            })
+        } else {
+            this.ws.emit(channel, {
+                action: action,
+                parameters: parameters
+            })
+        }
         return new Promise(resolve => {
             this.socket.on(listen.channel, data => {
                 if(data.action === listen.action) {
