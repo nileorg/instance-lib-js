@@ -2,8 +2,18 @@ const Protocols = require('./Protocols')
 
 module.exports = class InstanceApi {
     constructor(protocols) {
+        // Initialize the protocol class
         this.protocols = new Protocols(protocols)
     }
+    /**
+     * Send a message to a specific node
+     * confirming the registration
+     *
+     * @param {(WSProtocol|HttpProtocol)} protocol
+     * @param {String} recipient
+     * @param {Object} parameters
+     * @returns
+     */
     toNodeRegistered(protocol, recipient, parameters) {
         return this.protocols.to({
             protocol: protocol,
@@ -17,6 +27,12 @@ module.exports = class InstanceApi {
             }
         })
     }
+    /**
+     * Listen for new node registrations
+     *
+     * @param {(WSProtocol|HttpProtocol)} protocol
+     * @returns {Observable}
+     */
     onNodeRegister(protocol) {
         return this.protocols.on({
             protocol: protocol,
@@ -28,6 +44,12 @@ module.exports = class InstanceApi {
             }
         })
     }
+    /**
+     * Listen for node updates
+     *
+     * @param {(WSProtocol|HttpProtocol)} protocol
+     * @returns {Observable}
+     */
     onNodeUpdate(protocol) {
         return this.protocols.on({
             protocol: protocol,
@@ -39,6 +61,12 @@ module.exports = class InstanceApi {
             }
         })
     }
+    /**
+     * Listen for node logins
+     *
+     * @param {(WSProtocol|HttpProtocol)} protocol
+     * @returns {Observable}
+     */
     onNodeLogin(protocol) {
         return this.protocols.on({
             protocol: protocol,
@@ -50,6 +78,12 @@ module.exports = class InstanceApi {
             }
         })
     }
+    /**
+     * Send a global message to all clients
+     * suggesting to update the nodes list
+     *
+     * @param {Object} parameters
+     */
     toClientsUpdateNodeList(parameters) {
         this.protocols.forEach(protocol => {
             this.protocols.to({

@@ -5,12 +5,14 @@ module.exports = class Instance {
         this.api = new InstanceApi(protocols)
     }
     loadListeners(protocol) {
+        // For each listener assign a function that it will be called each time a message is read
         this.api.onNodeRegister(protocol).subscribe(this.onNodeRegister)
         this.api.onNodeUpdate(protocol).subscribe(this.onNodeUpdate)
         this.api.onNodeLogin(protocol).subscribe(this.onNodeLogin)
     }
     async onNodeRegister({ ok, parameters }) {
         console.log(parameters)
+        // Use ok to reply to that message using predefined channel/action passing the arguments as an object
         ok({ success: true })
     }
     async onNodeLogin({ ok, parameters }) {
@@ -30,6 +32,7 @@ module.exports = class Instance {
 				ws_id: socket.id
             }) */
         if (true) {
+            // Send a global message to all the clients
             this.api.toClientsUpdateNodeList({
                 onlineNodes: this.onlineNodes
             })
@@ -54,6 +57,7 @@ module.exports = class Instance {
         })
     }
     async toNodeRegistered(node) {
+        // Send a message to a specific recipient
         const registeredConfirmed = await this.api.toNodeRegistered(node.protocol, node.resource, {
             token: node.token
         })
