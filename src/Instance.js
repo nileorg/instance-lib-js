@@ -9,6 +9,7 @@ module.exports = class Instance {
         this.api.onNodeRegister(protocol).subscribe(this.onNodeRegister)
         this.api.onNodeUpdate(protocol).subscribe(this.onNodeUpdate)
         this.api.onNodeLogin(protocol).subscribe(this.onNodeLogin)
+        this.api.onClientRegister(protocol).subscribe(this.onClientRegister)
     }
     async onNodeRegister({ ok, parameters }) {
         console.log(parameters)
@@ -62,5 +63,12 @@ module.exports = class Instance {
             token: node.token
         })
         console.log(registeredConfirmed)
+    }
+    async onClientRegister({ ok, parameters, protocol }) {
+        // insert into users values (parameters.password, parameters.protocol)
+        ok({
+            success: true,
+            msg: "Client registered!"
+        })
     }
 }

@@ -4,6 +4,7 @@ module.exports = class WsProtocol {
     constructor(ws) {
         this.ws = ws
         this.socket = null
+        this.protocol_id = 'ws'
     }
     setSocket(socket) {
         this.socket = socket
@@ -35,8 +36,9 @@ module.exports = class WsProtocol {
             this.socket.on(channel, data => {
                 if (data.action === action) {
                     observer.next({
-                        ok: (parameters) => this.to(response.channel, response.action, parameters),
-                        parameters: data.parameters
+                        ok: (parameters) => this.to(this.socket.socket_id, response.channel, response.action, parameters),
+                        parameters: data.parameters,
+                        protocol: this.protocol_id
                     })
                 }
             })

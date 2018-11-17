@@ -6,6 +6,56 @@ module.exports = class InstanceApi {
         this.protocols = new Protocols(protocols)
     }
     /**
+     * Create an observable to an action on a channel through the specified protocol
+     * 
+     * @param {String} channel
+     * @param {String} action
+     * @param {String} protocol
+     * @param {Object} response
+     * @returns {Observable}
+     */
+    on(channel, action, protocol, response) {
+        return this.protocols.on({
+            protocol: protocol,
+            channel: channel,
+            action: action,
+            response: response
+        })
+    }
+    onNode(action, protocol, response) {
+        return this.on("node.to.instance", action, protocol, response)
+    }
+    onClient(action, protocol, response) {
+        return this.on("client.to.instance", action, protocol, response)
+    }
+    to(channel, action, protocol, recipient, parameters, listen) {
+        return this.protocols.to({
+            protocol: protocol,
+            recipient: recipient,
+            channel: channel,
+            action: action,
+            parameters: parameters,
+            listen: listen
+        })
+    }
+    toAll(channel, action, parameters, listen) {
+        this.protocols.forEach(protocol => {
+            this.to(channel, action, protocol, null, parameters, listen)
+        })
+    }
+    toNode(action, protocol, recipient, parameters, listen) {
+        return this.to("instance.to.node", action, protocol, recipient, parameters, listen)
+    }
+    toClient(action, protocol, recipient, parameters, listen) {
+        return this.to("instance.to.client", action, protocol, recipient, parameters, listen)
+    }
+    toAllNodes(action, parameters, listen) {
+        this.toAll("instance.to.node", action, parameters, listen)
+    }
+    toAllClients(action, parameters, listen) {
+        this.toAll("instance.to.client", action, parameters, listen)
+    }
+    /**
      * Send a message to a specific node
      * confirming the registration
      *
@@ -15,16 +65,9 @@ module.exports = class InstanceApi {
      * @returns
      */
     toNodeRegistered(protocol, recipient, parameters) {
-        return this.protocols.to({
-            protocol: protocol,
-            recipient: recipient,
-            channel: "instance.to.node",
-            action: "registered",
-            parameters: parameters,
-            listen: {
-                channel: "node.to.instance",
-                action: "registeredConfirmed"
-            }
+        return this.toNode("registered", protocol, recipient, parameters, {
+            channel: "node.to.instance",
+            action: "registeredConfirmed"
         })
     }
     /**
@@ -34,14 +77,9 @@ module.exports = class InstanceApi {
      * @returns {Observable}
      */
     onNodeRegister(protocol) {
-        return this.protocols.on({
-            protocol: protocol,
-            channel: "node.to.instance",
-            action: "register",
-            response: {
-                channel: "instance.to.node",
-                action: "confirmRegistration"
-            }
+        return this.onNode("register", protocol, {
+            channel: "instance.to.node",
+            action: "confirmRegistration"
         })
     }
     /**
@@ -51,14 +89,9 @@ module.exports = class InstanceApi {
      * @returns {Observable}
      */
     onNodeUpdate(protocol) {
-        return this.protocols.on({
-            protocol: protocol,
-            channel: "node.to.instance",
-            action: "update",
-            response: {
-                channel: "instance.to.node",
-                action: "updated"
-            }
+        return this.onNode("update", protocol, {
+            channel: "instance.to.node",
+            action: "updated"
         })
     }
     /**
@@ -68,14 +101,9 @@ module.exports = class InstanceApi {
      * @returns {Observable}
      */
     onNodeLogin(protocol) {
-        return this.protocols.on({
-            protocol: protocol,
-            channel: "node.to.instance",
-            action: "login",
-            response: {
-                channel: "instance.to.node",
-                action: "logged"
-            }
+        return this.onNode("login", protocol, {
+            channel: "instance.to.node",
+            action: "logged"
         })
     }
     /**
@@ -85,13 +113,16 @@ module.exports = class InstanceApi {
      * @param {Object} parameters
      */
     toClientsUpdateNodeList(parameters) {
-        this.protocols.forEach(protocol => {
-            this.protocols.to({
-                protocol: protocol,
-                channel: "instance.to.client",
-                action: "updateOnlineNodes",
-                parameters: parameters
-            })
-        });
+        this.toAllClients("updateOnlineNodes", protocol, null, parameters)
+    }
+
+    /*
+    in this file you specify how to listen a send messages to protocols
+    */
+    onClientRegister(protocol) {
+        return this.onNode("register", protocol, {
+            channel: "instance.to.client",
+            action: "registered"
+        })
     }
 }
