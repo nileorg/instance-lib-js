@@ -9,10 +9,10 @@ module.exports = class Protocols {
             throw `Protocol '${protocol}' not initialized`
         }
     }
-    to({protocol, recipient, channel, action, parameters, listen}) {
-        return this.get(protocol).to(recipient, channel, action, parameters, listen)
+    to({protocol, resource, recipient, channel, action, parameters, listen}) {
+        return this.get(protocol).to(recipient, channel, action, parameters, listen, resource)
     }
-    on({protocol,  channel, action, response}) {
-        return this.get(protocol).on(channel, action, response)
+    on({protocol, resource, channel, action, response}) {
+        return this.get(protocol).on(channel, action, response, resource)
     }
 }

@@ -32,8 +32,7 @@ let instance = new Instance(protocols)
 
 // For each protocol initialize the listeners
 ws.on("connection", (socket) => {
-    instance.protocols[WS_PROTOCOL].setSocket(socket)
-    instance.loadListeners(WS_PROTOCOL)
+    instance.loadListeners(WS_PROTOCOL, socket)
 })
 
 instance.loadListeners(HTTP_PROTOCOL)

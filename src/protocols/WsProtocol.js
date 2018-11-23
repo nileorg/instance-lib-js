@@ -3,15 +3,11 @@ const { Observable } = require('rxjs');
 module.exports = class WsProtocol {
     constructor(ws) {
         this.ws = ws
-        this.socket = null
         this.protocol_id = 'ws'
     }
-    setSocket(socket) {
-        this.socket = socket
-    }
-    to(recipient, channel, action, parameters, listen) {
+    to(recipient, channel, action, parameters, listen, resource) {
         if (recipient) {
-            this.socket.to(recipient).emit(channel, {
+            this.ws.to(recipient).emit(channel, {
                 action: action,
                 parameters: parameters
             })
@@ -23,7 +19,7 @@ module.exports = class WsProtocol {
         }
         if(listen) {
             return new Promise(resolve => {
-                this.socket.on(listen.channel, data => {
+                resource.on(listen.channel, data => {
                     if(data.action === listen.action) {
                         resolve(data.parameters)
                     }
@@ -31,12 +27,13 @@ module.exports = class WsProtocol {
             })
         }
     }
-    on(channel, action, response) {
+    on(channel, action, response, resource) {
         return Observable.create((observer) => {
-            this.socket.on(channel, data => {
+            let resource_id = resource.id
+            resource.on(channel, data => {
                 if (data.action === action) {
                     observer.next({
-                        ok: (parameters) => this.to(this.socket.socket_id, response.channel, response.action, parameters),
+                        ok: (parameters) => this.to(resource_id, response.channel, response.action, parameters, null, resource),
                         parameters: data.parameters,
                         protocol: this.protocol_id
                     })

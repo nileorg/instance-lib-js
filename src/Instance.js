@@ -4,15 +4,15 @@ module.exports = class Instance {
     constructor(protocols) {
         this.api = new InstanceApi(protocols)
     }
-    loadListeners(protocol) {
+    loadListeners(protocol, resource) {
         // For each listener assign a function that it will be called each time a message is read
-        this.api.onNodeRegister(protocol).subscribe(this.onNodeRegister)
-        this.api.onNodeUpdate(protocol).subscribe(this.onNodeUpdate)
-        this.api.onNodeLogin(protocol).subscribe(this.onNodeLogin)
-        this.api.onClientRegister(protocol).subscribe(this.onClientRegister)
+        this.api.onNodeRegister(protocol, resource).subscribe(this.onNodeRegister)
+        this.api.onNodeUpdate(protocol, resource).subscribe(this.onNodeUpdate)
+        this.api.onNodeLogin(protocol, resource).subscribe(this.onNodeLogin)
+        this.api.onClientRegister(protocol, resource).subscribe(this.onClientRegister)
     }
     async onNodeRegister({ ok, parameters }) {
-        console.log(parameters)
+        console.log("its really mmeeee!! " + parameters)
         // Use ok to reply to that message using predefined channel/action passing the arguments as an object
         ok({ success: true })
     }
