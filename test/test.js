@@ -1,4 +1,3 @@
-const cmd = require("node-cmd");
 const io = require("socket.io-client");
 const expect = require("chai").expect;
 // mocha is defined globally, no need to require
@@ -6,26 +5,45 @@ const expect = require("chai").expect;
 describe("WS suite of unit tests", function() {
   // increase test timeout to 10 seconds
   this.timeout(10000);
+  var ws;
   var socket;
-  var process;
 
   // execution order: 0
   before(function(done) {
-    // run local instance as a child process
-    process = cmd.run("npm start");
+    // setup and run local instance (ws server)
+    const WsProtocol = require("../src/protocols/WsProtocol");
+    const Instance = require("../src/Instance");
+
+    // initialize a websocket server
+    ws = require('socket.io').listen(3334);
+
+    // create an object containing the protocols specifications
+    const WS_PROTOCOL = "ws";
+
+    let protocols = {};
+    protocols[WS_PROTOCOL] = new WsProtocol(ws);
+
+    // initialize the Instance with the object
+    let instance = new Instance(protocols);
+
+    // for each protocol initialize the listeners
+    ws.on("connection", socket => {
+      console.log("Local instance is running...");
+      instance.loadListeners(WS_PROTOCOL, socket);
+    });
     done();
   });
 
   // execution order: 1
   beforeEach(function(done) {
-    // setup socket connection
+    // setup socket connection (ws client)
     socket = io.connect("http://localhost:3334");
     socket.on("connect", function() {
-      console.log("worked...");
+      console.log("Socket worked...");
       done();
     });
     socket.on("disconnect", function() {
-      console.log("disconnected...");
+      console.log("Socket disconnected...");
     });
   });
 
@@ -33,12 +51,14 @@ describe("WS suite of unit tests", function() {
   afterEach(function(done) {
     // cleanup
     if (socket.connected) {
-      console.log("disconnecting...");
+      console.log("Disconnecting socket...");
       socket.disconnect();
     } else {
       // there will not be a connection unless you have done() in beforeEach, socket.on('connect'...)
-      console.log("no connection to break...");
+      console.log("No socket connection to break...");
     }
+    // kill local instance (ws server)
+    ws.close();
     done();
   });
 
@@ -49,7 +69,7 @@ describe("WS suite of unit tests", function() {
         action: "register",
         parameters: "hello"
       });
-      socket.on("instance.to.node", function(res) {
+      socket.once("instance.to.node", function(res) {
         expect(res, "Response is not an object").to.be.an("object");
         expect(res, "Response action property is invalid").to.have.property(
           "action",
