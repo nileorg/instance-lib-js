@@ -42,7 +42,7 @@ describe('Local instance test suite', function () {
     done()
   })
 
-  describe("Testing instance's protocol", function () {
+  describe("Testing instance's protocols", function () {
     let socket
     const assertResponse = function (res, action, parameters) {
       expect(res, 'Response is not an object').to.be.an('object')
@@ -76,8 +76,20 @@ describe('Local instance test suite', function () {
           channel: 'test.to.instance',
           action: 'testReceived'
         })
-        socket.once('instance.to.test', function (res) {
+        socket.once('instance.to.test', res => {
           assertResponse(res, 'test', { success: true })
+          done()
+        })
+      })
+      it('Should listen to a socket', function (done) {
+        socket.emit('node.to.instance', {
+          action: 'register',
+          parameters: {
+            success: true
+          }
+        })
+        instance.on('nodeRegister', res => {
+          expect(res).to.have.property('success', true)
           done()
         })
       })

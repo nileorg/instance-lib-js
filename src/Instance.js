@@ -14,7 +14,6 @@ module.exports = class Instance extends EventEmitter {
     this.api.onClientRegister(protocol, resource).subscribe(this.onClientRegister.bind(this))
   }
   onNodeRegister ({ ok, parameters }) {
-    console.log('its really mmeeee!! ' + parameters)
     this.emit('nodeRegister', parameters)
     // Use ok to reply to that message using predefined channel/action passing the arguments as an object
     ok({ success: true })
