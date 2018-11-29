@@ -1,18 +1,21 @@
 const InstanceApi = require("./InstanceApi")
+const EventEmitter = require('events');
 
-module.exports = class Instance {
+module.exports = class Instance extends EventEmitter {
     constructor(protocols) {
+        super()
         this.api = new InstanceApi(protocols)
     }
     loadListeners(protocol, resource) {
         // For each listener assign a function that it will be called each time a message is read
-        this.api.onNodeRegister(protocol, resource).subscribe(this.onNodeRegister)
-        this.api.onNodeUpdate(protocol, resource).subscribe(this.onNodeUpdate)
-        this.api.onNodeLogin(protocol, resource).subscribe(this.onNodeLogin)
-        this.api.onClientRegister(protocol, resource).subscribe(this.onClientRegister)
+        this.api.onNodeRegister(protocol, resource).subscribe(this.onNodeRegister.bind(this))
+        this.api.onNodeUpdate(protocol, resource).subscribe(this.onNodeUpdate.bind(this))
+        this.api.onNodeLogin(protocol, resource).subscribe(this.onNodeLogin.bind(this))
+        this.api.onClientRegister(protocol, resource).subscribe(this.onClientRegister.bind(this))
     }
-    async onNodeRegister({ ok, parameters }) {
+    onNodeRegister({ ok, parameters }) {
         console.log("its really mmeeee!! " + parameters)
+        this.emit("nodeRegister", parameters)
         // Use ok to reply to that message using predefined channel/action passing the arguments as an object
         ok({ success: true })
     }

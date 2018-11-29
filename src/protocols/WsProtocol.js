@@ -17,14 +17,8 @@ module.exports = class WsProtocol {
                 parameters: parameters
             })
         }
-        if(listen) {
-            return new Promise(resolve => {
-                resource.on(listen.channel, data => {
-                    if(data.action === listen.action) {
-                        resolve(data.parameters)
-                    }
-                })
-            })
+        if(listen && resource) {
+            return this.on(listen.channel, listen.action, {}, resource)
         }
     }
     on(channel, action, response, resource) {
