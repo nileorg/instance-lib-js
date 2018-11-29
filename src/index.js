@@ -1,18 +1,18 @@
-const WsProtocol = require("./protocols/WsProtocol")
-const HttpProtocol = require("./protocols/HttpProtocol")
+const WsProtocol = require('./protocols/WsProtocol')
+const HttpProtocol = require('./protocols/HttpProtocol')
 
-const Instance = require("./Instance")
+const Instance = require('./Instance')
 // Initialize an http server with httpdispatcher
 const server = require('http').createServer(handleRequest)
-const httpdispatcher  = require('httpdispatcher')
-var dispatcher = new httpdispatcher()
+const Httpdispatcher = require('httpdispatcher')
+var dispatcher = new Httpdispatcher()
 
-function handleRequest(request, response) {
-    try {
-        dispatcher.dispatch(request, response);
-    } catch (err) {
-        console.log(err);
-    }
+function handleRequest (request, response) {
+  try {
+    dispatcher.dispatch(request, response)
+  } catch (err) {
+    console.log(err)
+  }
 }
 
 // Initialize an websocket server
@@ -31,8 +31,8 @@ protocols[HTTP_PROTOCOL] = new HttpProtocol(dispatcher)
 let instance = new Instance(protocols)
 
 // For each protocol initialize the listeners
-ws.on("connection", (socket) => {
-    instance.loadListeners(WS_PROTOCOL, socket)
+ws.on('connection', (socket) => {
+  instance.loadListeners(WS_PROTOCOL, socket)
 })
 
 instance.loadListeners(HTTP_PROTOCOL)
