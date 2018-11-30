@@ -7,21 +7,36 @@ describe('Local instance test suite', function () {
   // increase test timeout to 10 seconds
   this.timeout(10000)
   var ws
+  var http
   var instance
-  // execution order: 0
   before(function (done) {
-    // setup and run local instance (ws server)
+    // setup and run local instance (for both ws and http)
     const WsProtocol = require('../src/protocols/WsProtocol')
+    const HttpProtocol = require('../src/protocols/HttpProtocol')
+    const Httpdispatcher = require('httpdispatcher')
     const Instance = require('../src/Instance')
 
     // initialize a websocket server
     ws = require('socket.io').listen(3334)
 
+    // initialize an http server
+    http = require('http').createServer(handleRequest)
+    const dispatcher = new Httpdispatcher()
+    function handleRequest (request, response) {
+      try {
+        dispatcher.dispatch(request, response)
+      } catch (err) {
+        console.log(err)
+      }
+    }
+
     // create an object containing the protocols specifications
     const WS_PROTOCOL = 'ws'
+    const HTTP_PROTOCOL = 'http'
 
     let protocols = {}
     protocols[WS_PROTOCOL] = new WsProtocol(ws)
+    protocols[HTTP_PROTOCOL] = new HttpProtocol(dispatcher)
 
     // initialize the Instance with the object
     instance = new Instance(protocols)
@@ -30,20 +45,21 @@ describe('Local instance test suite', function () {
     ws.on('connection', socket => {
       instance.loadListeners(WS_PROTOCOL, socket)
     })
+    instance.loadListeners(HTTP_PROTOCOL)
     done()
   })
 
-  // execution order: last
   after(function (done) {
-    // cleanup
-
-    // kill local instance (ws server)
+    // kill local instance (ws server and http server)
     ws.close()
+    http.close()
     done()
   })
 
   describe("Testing instance's protocols", function () {
     let socket
+    let httpNode
+    let dispatcher
     const assertResponse = function (res, action, parameters) {
       expect(res, 'Response is not an object').to.be.an('object')
       expect(res, 'Response action property is invalid').to.have.property(
@@ -55,21 +71,33 @@ describe('Local instance test suite', function () {
         parameters
       )
     }
+
     before(function (done) {
       socket = io.connect('http://localhost:3334')
-      socket.on('connect', function () {
-        done()
-      })
+      httpNode = require('http').createServer(handleRequest)
+      const Httpdispatcher = require('httpdispatcher')
+      dispatcher = new Httpdispatcher()
+      function handleRequest (request, response) {
+        try {
+          dispatcher.dispatch(request, response)
+        } catch (err) {
+          console.log(err)
+        }
+      }
+      httpNode.listen(8888)
+      done()
     })
+
     after(function (done) {
       if (socket.connected) {
         socket.disconnect()
       } else {
-        // there will not be a connection unless you have done() in beforeEach, socket.on('connect'...)
         console.log('No socket connection to break...')
       }
+      httpNode.close()
       done()
     })
+
     describe('Testing WebSocket protocol', function () {
       it('Should send messages to all sockets', function (done) {
         instance.api.to('instance.to.test', 'test', 'ws', null, null, { success: true }, {
@@ -94,31 +122,27 @@ describe('Local instance test suite', function () {
         })
       })
     })
-  })
 
-  // execution order: 2
-  /* describe("Testing interaction between instance and node", function () {
-    it("Should register a new node", function (done) {
-      socket.emit("node.to.instance", {
-        action: "register",
-        parameters: "hello"
-      });
-      instance.on("nodeRegister", (parameters) => {
-        expect(parameters, "Parameters changed during request").to.equal("hello")
+    describe('Testing HTTP protocol', function () {
+      it('Should send and reply to a message', function (done) {
+        instance.api.to('instance.to.test', 'test', 'http', null, 'http://localhost:8888/', { success: true }, {
+          channel: 'test.to.instance',
+          action: 'testReceived'
+        }).subscribe(d => {
+          assertResponse(d, 'testReceived', { success: true })
+        })
+        dispatcher.onPost('/instance.to.test/test', (req, res) => {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          const parameters = JSON.parse(req.body)
+          assertResponse(parameters, 'test', { success: true })
+          res.end(JSON.stringify({
+            channel: 'test.to.instance',
+            action: 'testReceived',
+            parameters: { success: true }
+          }))
+          done()
+        })
       })
-      socket.once("instance.to.node", function (res) {
-        expect(res, "Response is not an object").to.be.an("object");
-        expect(res, "Response action property is invalid").to.have.property(
-          "action",
-          "confirmRegistration"
-        );
-        expect(res, "Response parameters are invalid").to.have.deep.property(
-          "parameters",
-          { success: true }
-        );
-        done();
-      });
-    });
-  });
-  */
+    })
+  })
 })
