@@ -1,19 +1,29 @@
 /* global describe before after it */
-const io = require('socket.io-client')
 const expect = require('chai').expect
 // mocha is defined globally, no need to require
+
+// protocol dependencies
+const io = require('socket.io-client')
+const Httpdispatcher = require('httpdispatcher')
+const dispatcher = new Httpdispatcher()
+function handleRequest (request, response) {
+  try {
+    dispatcher.dispatch(request, response)
+  } catch (err) {
+    console.log(err)
+  }
+}
 
 describe('Local instance test suite', function () {
   // increase test timeout to 10 seconds
   this.timeout(10000)
-  var ws
-  var http
-  var instance
+  let ws
+  let http
+  let instance
   before(function (done) {
     // setup and run local instance (for both ws and http)
     const WsProtocol = require('../src/protocols/WsProtocol')
     const HttpProtocol = require('../src/protocols/HttpProtocol')
-    const Httpdispatcher = require('httpdispatcher')
     const Instance = require('../src/Instance')
 
     // initialize a websocket server
@@ -21,14 +31,6 @@ describe('Local instance test suite', function () {
 
     // initialize an http server
     http = require('http').createServer(handleRequest)
-    const dispatcher = new Httpdispatcher()
-    function handleRequest (request, response) {
-      try {
-        dispatcher.dispatch(request, response)
-      } catch (err) {
-        console.log(err)
-      }
-    }
 
     // create an object containing the protocols specifications
     const WS_PROTOCOL = 'ws'
@@ -59,7 +61,6 @@ describe('Local instance test suite', function () {
   describe("Testing instance's protocols", function () {
     let socket
     let httpNode
-    let dispatcher
     const assertResponse = function (res, action, parameters) {
       expect(res, 'Response is not an object').to.be.an('object')
       expect(res, 'Response action property is invalid').to.have.property(
@@ -75,15 +76,6 @@ describe('Local instance test suite', function () {
     before(function (done) {
       socket = io.connect('http://localhost:3334')
       httpNode = require('http').createServer(handleRequest)
-      const Httpdispatcher = require('httpdispatcher')
-      dispatcher = new Httpdispatcher()
-      function handleRequest (request, response) {
-        try {
-          dispatcher.dispatch(request, response)
-        } catch (err) {
-          console.log(err)
-        }
-      }
       httpNode.listen(8888)
       done()
     })
@@ -128,8 +120,8 @@ describe('Local instance test suite', function () {
         instance.api.to('instance.to.test', 'test', 'http', null, 'http://localhost:8888/', { success: true }, {
           channel: 'test.to.instance',
           action: 'testReceived'
-        }).subscribe(d => {
-          assertResponse(d, 'testReceived', { success: true })
+        }).subscribe(res => {
+          assertResponse(res, 'testReceived', { success: true })
         })
         dispatcher.onPost('/instance.to.test/test', (req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json' })
