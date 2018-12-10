@@ -22,8 +22,8 @@ describe('Local instance test suite', function () {
   let instance
   before(function (done) {
     // setup and run local instance (for both ws and http)
-    const WsProtocol = require('../src/protocols/WsProtocol')
-    const HttpProtocol = require('../src/protocols/HttpProtocol')
+    const WsProtocol = require('../src/protocols/WebSockets')
+    const HttpProtocol = require('../src/protocols/Http')
     const Instance = require('../src/Instance')
 
     // initialize a websocket server
@@ -33,21 +33,20 @@ describe('Local instance test suite', function () {
     http = require('http').createServer(handleRequest)
 
     // create an object containing the protocols specifications
-    const WS_PROTOCOL = 'ws'
-    const HTTP_PROTOCOL = 'http'
-
     let protocols = {}
-    protocols[WS_PROTOCOL] = new WsProtocol(ws)
-    protocols[HTTP_PROTOCOL] = new HttpProtocol(dispatcher)
+    let wspro = new WsProtocol(ws)
+    let httppro = new HttpProtocol(http)
+    protocols[wspro.ID] = wspro
+    protocols[httppro.ID] = httppro
 
     // initialize the Instance with the object
     instance = new Instance(protocols)
 
     // for each protocol initialize the listeners
     ws.on('connection', socket => {
-      instance.loadListeners(WS_PROTOCOL, socket)
+      instance.loadListeners(wspro.ID, socket)
     })
-    instance.loadListeners(HTTP_PROTOCOL)
+    instance.loadListeners(httppro.ID, dispatcher)
     done()
   })
 
@@ -92,9 +91,8 @@ describe('Local instance test suite', function () {
 
     describe('Testing WebSocket protocol', function () {
       it('Should send messages to all sockets', function (done) {
-        instance.api.to('instance.to.test', 'test', 'ws', null, null, { success: true }, {
-          channel: 'test.to.instance',
-          action: 'testReceived'
+        instance.protocols['ws'].to(null, 'instance.to.test', 'test', {
+          success: true
         })
         socket.once('instance.to.test', res => {
           assertResponse(res, 'test', { success: true })
@@ -117,11 +115,13 @@ describe('Local instance test suite', function () {
 
     describe('Testing HTTP protocol', function () {
       it('Should send and reply to a message', function (done) {
-        instance.api.to('instance.to.test', 'test', 'http', null, 'http://localhost:8888/', { success: true }, {
+        instance.protocols['http'].to('http://localhost:8888/', 'instance.to.test', 'test', { success: true }, {
           channel: 'test.to.instance',
-          action: 'testReceived'
-        }).subscribe(res => {
-          assertResponse(res, 'testReceived', { success: true })
+          action: 'testReceived',
+          callback: (protocol, sender, parameters) => {
+            assertResponse(parameters, 'testReceived', { success: true })
+            done()
+          }
         })
         dispatcher.onPost('/instance.to.test/test', (req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -132,7 +132,6 @@ describe('Local instance test suite', function () {
             action: 'testReceived',
             parameters: { success: true }
           }))
-          done()
         })
       })
     })
