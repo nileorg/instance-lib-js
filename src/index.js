@@ -16,19 +16,20 @@ function handleRequest (request, response) {
 }
 
 // Initialize an websocket server
-const ws = require('socket.io')(server)
+const wsServer = require('socket.io')(server)
 server.listen(3334)
 
 let protocols = {}
-protocols[WebSockets.ID] = new WebSockets(ws)
-protocols[Http.ID] = new Http(server)
-
+let ws = new WebSockets(wsServer)
+let http = new Http(server)
+protocols[ws.ID] = ws
+protocols[http.ID] = http
 // Initialize the Instance with the object
 let instance = new Instance(protocols)
 
 // For each protocol initialize the listeners
-ws.on('connection', (socket) => {
-  instance.loadListeners(WebSockets.ID, socket)
+wsServer.on('connection', (socket) => {
+  instance.loadListeners(ws.ID, socket)
 })
 
-instance.loadListeners(Http.ID, dispatcher)
+instance.loadListeners(http.ID, dispatcher)
