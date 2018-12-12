@@ -23,6 +23,7 @@
   "dependencies": {
     "http": "0.0.0",
     "httpdispatcher": "^2.1.2",
+    "ipfs": "^0.33.1",
     "node-fetch": "^2.3.0",
     "randomstring": "^1.1.5",
     "rxjs": "^6.3.3",

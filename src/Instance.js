@@ -1,12 +1,14 @@
 const EventEmitter = require('events')
 const randomstring = require('randomstring')
 const Db = require('./Db')
+const Ipfs = require('./distributedDatabases/Ipfs')
 
 module.exports = class Instance extends EventEmitter {
-  constructor (protocols, db) {
+  constructor (protocols, db, ipfs) {
     super()
     this.protocols = protocols
     this.db = new Db(db)
+    this.ipfs = new Ipfs(ipfs)
     this.online = {
       nodes: [],
       clients: []
@@ -63,6 +65,7 @@ module.exports = class Instance extends EventEmitter {
       `, Object.values(queryParameters)
     )
     if (success) {
+      await this.ipfs.save(parameters.hash)
       reply({ success: true, token: token })
     } else {
       reply({ success: false })

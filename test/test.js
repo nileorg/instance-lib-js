@@ -2,6 +2,9 @@
 const expect = require('chai').expect
 // mocha is defined globally, no need to require
 
+const IPFS = require('ipfs')
+let ipfsNode = null
+
 // protocol dependencies
 const io = require('socket.io-client')
 const Httpdispatcher = require('httpdispatcher')
@@ -26,10 +29,21 @@ describe('Local instance test suite', function () {
     const HttpProtocol = require('../src/protocols/Http')
     const Instance = require('../src/Instance')
 
+    // initialize database
     const sqlite3 = require('sqlite3').verbose()
     const db = new sqlite3.Database('var/instance.db', sqlite3.OPEN_READWRITE, function (err) {
       if (err) {
         console.log(err)
+      }
+    })
+
+    // initialize ipfs
+    ipfsNode = new IPFS({
+      repo: 'var/instance',
+      config: {
+        Addresses: {
+          Swarm: ['/ip4/0.0.0.0/tcp/0']
+        }
       }
     })
 
@@ -47,20 +61,22 @@ describe('Local instance test suite', function () {
     protocols[httppro.ID] = httppro
 
     // initialize the Instance with the object
-    instance = new Instance(protocols, db)
-
-    // for each protocol initialize the listeners
-    ws.on('connection', socket => {
-      instance.loadListeners(wspro.ID, socket)
+    ipfsNode.on('ready', () => {
+      instance = new Instance(protocols, db, ipfsNode)
+      // for each protocol initialize the listeners
+      ws.on('connection', socket => {
+        instance.loadListeners(wspro.ID, socket)
+      })
+      instance.loadListeners(httppro.ID, dispatcher)
+      done()
     })
-    instance.loadListeners(httppro.ID, dispatcher)
-    done()
   })
 
   after(function (done) {
     // kill local instance (ws server and http server)
     ws.close()
     http.close()
+    ipfsNode.stop()
     done()
   })
 
@@ -142,6 +158,18 @@ describe('Local instance test suite', function () {
         })
       })
     })
+
+    describe('Testing IPFS', function () {
+      it('Should store and read data', async function () {
+        const obj1 = {
+          test: 'test'
+        }
+        const hash = await instance.ipfs.add(obj1)
+        expect(hash, 'Could not write to IPFS').to.not.equal(false)
+        const obj2 = await instance.ipfs.get(hash)
+        expect(obj2, 'Could not read IPFS').to.deep.equal(obj1)
+      })
+    })
   })
   describe('Integration testing between Instance and Node/Client', function () {
     let socket
@@ -179,12 +207,29 @@ describe('Local instance test suite', function () {
           assertResponse(res, 'registerConfirm')
           done()
         })
-        socket.emit('node.to.instance', {
-          action: 'register',
-          parameters: {
-            hash: 'lorem ipsum',
-            information: 'lorem ipsum dolor'
+        instance.ipfs.add([
+          {
+            'type': 'button',
+            'action': 'function1',
+            'parameters': ['inp1'],
+            'label': 'Call function1'
+          },
+          {
+            'type': 'text',
+            'key': 'inp1'
+          },
+          {
+            'type': 'output',
+            'key': 'out1'
           }
+        ]).then(hash => {
+          socket.emit('node.to.instance', {
+            action: 'register',
+            parameters: {
+              hash: hash,
+              information: '{ name: "test_node" }'
+            }
+          })
         })
       })
       it('Should login existing node', function (done) {
@@ -208,8 +253,8 @@ describe('Local instance test suite', function () {
           action: 'update',
           parameters: {
             token: token,
-            hash: 'lorem ipsum 2',
-            information: 'lorem ipsum dolor 2'
+            hash: 'QmQEf7RF89vV5afzM9B7mrfTTprnHuthLCs414fYJ7rzbZ',
+            information: '{ name: "test_node_updated" }'
           }
         })
       })
