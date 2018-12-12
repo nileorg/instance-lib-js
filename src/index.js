@@ -15,6 +15,9 @@ function handleRequest (request, response) {
   }
 }
 
+const sqlite3 = require('sqlite3').verbose()
+const db = new sqlite3.Database('../var/instance.db')
+
 // Initialize an websocket server
 const wsServer = require('socket.io')(server)
 server.listen(3334)
@@ -25,7 +28,8 @@ let http = new Http(server)
 protocols[ws.ID] = ws
 protocols[http.ID] = http
 // Initialize the Instance with the object
-let instance = new Instance(protocols)
+
+let instance = new Instance(protocols, db)
 
 // For each protocol initialize the listeners
 wsServer.on('connection', (socket) => {

@@ -32,6 +32,9 @@ class WebSockets {
       }
     })
   }
+  disconnect (resource, callback) {
+    resource.on('disconnect', () => callback(this.ID, resource.id))
+  }
 }
 
 exports['default'] = WebSockets

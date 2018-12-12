@@ -39,6 +39,7 @@ class Http {
       )
     })
   }
+  disconnect () {}
 }
 
 exports['default'] = Http

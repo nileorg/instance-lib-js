@@ -24,6 +24,7 @@
     "http": "0.0.0",
     "httpdispatcher": "^2.1.2",
     "node-fetch": "^2.3.0",
+    "randomstring": "^1.1.5",
     "rxjs": "^6.3.3",
     "socket.io": "^2.1.1",
     "sqlite3": "^4.0.4"

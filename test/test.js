@@ -26,6 +26,13 @@ describe('Local instance test suite', function () {
     const HttpProtocol = require('../src/protocols/Http')
     const Instance = require('../src/Instance')
 
+    const sqlite3 = require('sqlite3').verbose()
+    const db = new sqlite3.Database('var/instance.db', sqlite3.OPEN_READWRITE, function (err) {
+      if (err) {
+        console.log(err)
+      }
+    })
+
     // initialize a websocket server
     ws = require('socket.io').listen(3334)
 
@@ -40,7 +47,7 @@ describe('Local instance test suite', function () {
     protocols[httppro.ID] = httppro
 
     // initialize the Instance with the object
-    instance = new Instance(protocols)
+    instance = new Instance(protocols, db)
 
     // for each protocol initialize the listeners
     ws.on('connection', socket => {
@@ -101,12 +108,12 @@ describe('Local instance test suite', function () {
       })
       it('Should listen to a socket', function (done) {
         socket.emit('node.to.instance', {
-          action: 'register',
+          action: 'ping',
           parameters: {
             success: true
           }
         })
-        instance.on('nodeRegister', res => {
+        instance.on('ping', res => {
           expect(res).to.have.property('success', true)
           done()
         })
@@ -132,6 +139,102 @@ describe('Local instance test suite', function () {
             action: 'testReceived',
             parameters: { success: true }
           }))
+        })
+      })
+    })
+  })
+  describe('Integration testing between Instance and Node/Client', function () {
+    let socket
+    const assertResponse = function (res, action) {
+      expect(res, 'Response is not an object').to.be.an('object')
+      expect(res, 'Response action property is invalid').to.have.property(
+        'action',
+        action
+      )
+      expect(res.parameters, 'Response parameters are invalid').to.have.property(
+        'success',
+        true
+      )
+    }
+
+    before(function (done) {
+      socket = io.connect('http://localhost:3334')
+      done()
+    })
+
+    after(function (done) {
+      if (socket.connected) {
+        socket.disconnect()
+      } else {
+        console.log('No socket connection to break...')
+      }
+      done()
+    })
+
+    describe('Testing node', function () {
+      let token = null
+      it('Should register new node', function (done) {
+        socket.once('instance.to.node', res => {
+          token = res.parameters.token
+          assertResponse(res, 'registerConfirm')
+          done()
+        })
+        socket.emit('node.to.instance', {
+          action: 'register',
+          parameters: {
+            hash: 'lorem ipsum',
+            information: 'lorem ipsum dolor'
+          }
+        })
+      })
+      it('Should login existing node', function (done) {
+        socket.once('instance.to.node', res => {
+          assertResponse(res, 'logged')
+          done()
+        })
+        socket.emit('node.to.instance', {
+          action: 'login',
+          parameters: {
+            token: token
+          }
+        })
+      })
+      it('Should update existing node', function (done) {
+        socket.once('instance.to.node', res => {
+          assertResponse(res, 'updated')
+          done()
+        })
+        socket.emit('node.to.instance', {
+          action: 'update',
+          parameters: {
+            token: token,
+            hash: 'lorem ipsum 2',
+            information: 'lorem ipsum dolor 2'
+          }
+        })
+      })
+      it('Should logout existing node', function (done) {
+        const lengthBeforeLogout = instance.online.nodes.length
+        socket.disconnect()
+        const onDisconnected = () => {
+          const lengthAfterLogout = instance.online.nodes.length
+          expect(lengthAfterLogout, 'Online nodes list didn\'t change').to.be.eq(lengthBeforeLogout - 1)
+          instance.removeListener('disconnected', onDisconnected)
+          done()
+        }
+        instance.on('disconnected', onDisconnected)
+      })
+      it('Should delete existing node', function (done) {
+        socket = io.connect('http://localhost:3334')
+        socket.once('instance.to.node', res => {
+          assertResponse(res, 'deleted')
+          done()
+        })
+        socket.emit('node.to.instance', {
+          action: 'delete',
+          parameters: {
+            token: token
+          }
         })
       })
     })
