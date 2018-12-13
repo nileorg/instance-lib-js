@@ -39,6 +39,7 @@ describe('Local instance test suite', function () {
 
     // initialize ipfs
     ipfsNode = new IPFS({
+      silent: true,
       repo: 'var/instance',
       config: {
         Addresses: {
