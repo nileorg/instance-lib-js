@@ -1,14 +1,13 @@
 const EventEmitter = require('events')
 const randomstring = require('randomstring')
 const Db = require('./Db')
-const Ipfs = require('./distributedDatabases/Ipfs')
 
 module.exports = class Instance extends EventEmitter {
-  constructor (protocols, db, ipfs) {
+  constructor (protocols, db, ddbms) {
     super()
     this.protocols = protocols
     this.db = new Db(db)
-    this.ipfs = new Ipfs(ipfs)
+    this.ddbms = ddbms
     this.online = {
       nodes: [],
       clients: []
@@ -47,14 +46,14 @@ module.exports = class Instance extends EventEmitter {
     let token = randomstring.generate(5) + Date.now()
     const queryParameters = {
       token: token,
-      ipfs_hash: parameters.hash,
+      components: parameters.components,
       information: JSON.stringify(parameters.information),
       resource: protocol + '://' + sender
     }
     const { success } = await this.db.run(`
       INSERT INTO nodes (
         token,
-        ipfs_hash,
+        components,
         information,
         resource,
         active
@@ -63,7 +62,10 @@ module.exports = class Instance extends EventEmitter {
       `, Object.values(queryParameters)
     )
     if (success) {
-      await this.ipfs.save(parameters.hash)
+      const protocolRegex = parameters.components.match(/(^\w+:|^)\/\//)
+      const ddbms = protocolRegex[0].replace('://', '')
+      const components = parameters.components.replace(/(^\w+:|^)\/\//, '')
+      await this.ddbms[ddbms].save(components).catch(e => {})
       reply({ success: true, token: token })
     } else {
       reply({ success: false })
@@ -78,14 +80,14 @@ module.exports = class Instance extends EventEmitter {
       const node = results[0]
       const { success } = await this.db.run(`UPDATE nodes
         SET 
-          ipfs_hash = ?,
+          components = ?,
           information = ? 
         WHERE node_id = ?
-      `, [parameters.hash, parameters.information, node.node_id])
+      `, [parameters.components, parameters.information, node.node_id])
       if (success) {
         const updatedOnlineNode = this.online.nodes.find(n => n.id === node.node_id)
         if (updatedOnlineNode) {
-          updatedOnlineNode.hash = parameters.hash
+          updatedOnlineNode.components = parameters.components
         }
         reply({
           success: true
@@ -119,14 +121,14 @@ module.exports = class Instance extends EventEmitter {
     if (success) {
       const node = results[0]
       this.online.nodes.push({
-        hash: node.ipfs_hash,
+        components: node.components,
         id: node.node_id,
         resource: sender,
         protocol: protocol
       })
       reply({
         success: true,
-        hash: node.ipfs_hash
+        components: node.components
       })
     } else {
       reply({

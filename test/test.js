@@ -48,6 +48,11 @@ describe('Local instance test suite', function () {
       }
     })
 
+    const Ipfs = require('../src/ddbms/Ipfs')
+    let ddbms = {}
+    const ipfsddbms = new Ipfs(ipfsNode)
+    ddbms[ipfsddbms.ID] = ipfsddbms
+
     // initialize a websocket server
     ws = require('socket.io').listen(3334)
 
@@ -63,7 +68,7 @@ describe('Local instance test suite', function () {
 
     // initialize the Instance with the object
     ipfsNode.on('ready', () => {
-      instance = new Instance(protocols, db, ipfsNode)
+      instance = new Instance(protocols, db, ddbms)
       // for each protocol initialize the listeners
       ws.on('connection', socket => {
         instance.loadListeners(wspro.ID, socket)
@@ -165,9 +170,9 @@ describe('Local instance test suite', function () {
         const obj1 = {
           test: 'test'
         }
-        const hash = await instance.ipfs.add(obj1)
+        const hash = await instance.ddbms['ipfs'].add(obj1)
         expect(hash, 'Could not write to IPFS').to.not.equal(false)
-        const obj2 = await instance.ipfs.get(hash)
+        const obj2 = await instance.ddbms['ipfs'].get(hash)
         expect(obj2, 'Could not read IPFS').to.deep.equal(obj1)
       })
     })
@@ -208,7 +213,7 @@ describe('Local instance test suite', function () {
           assertResponse(res, 'registerConfirm')
           done()
         })
-        instance.ipfs.add([
+        instance.ddbms['ipfs'].add([
           {
             'type': 'button',
             'action': 'function1',
@@ -227,7 +232,7 @@ describe('Local instance test suite', function () {
           socket.emit('node.to.instance', {
             action: 'register',
             parameters: {
-              hash: hash,
+              components: 'ipfs://' + hash,
               information: '{ name: "test_node" }'
             }
           })
@@ -254,7 +259,7 @@ describe('Local instance test suite', function () {
           action: 'update',
           parameters: {
             token: token,
-            hash: 'QmQEf7RF89vV5afzM9B7mrfTTprnHuthLCs414fYJ7rzbZ',
+            components: 'ipfs://QmQEf7RF89vV5afzM9B7mrfTTprnHuthLCs414fYJ7rzbZ',
             information: '{ name: "test_node_updated" }'
           }
         })

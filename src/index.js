@@ -22,6 +22,23 @@ const db = new sqlite3.Database('../var/instance.db')
 const wsServer = require('socket.io')(server)
 server.listen(3334)
 
+// initialize ipfs
+const IPFS = require('ipfs')
+let ipfsNode = new IPFS({
+  silent: true,
+  repo: 'var/instance',
+  config: {
+    Addresses: {
+      Swarm: ['/ip4/0.0.0.0/tcp/0']
+    }
+  }
+})
+
+const Ipfs = require('../src/ddbms/Ipfs')
+let ddbms = {}
+const ipfsddbms = new Ipfs(ipfsNode)
+ddbms[ipfsddbms.ID] = ipfsddbms
+
 let protocols = {}
 let ws = new WebSockets(wsServer)
 let http = new Http(server)
@@ -29,7 +46,7 @@ protocols[ws.ID] = ws
 protocols[http.ID] = http
 // Initialize the Instance with the object
 
-let instance = new Instance(protocols, db)
+let instance = new Instance(protocols, db, ddbms)
 
 // For each protocol initialize the listeners
 wsServer.on('connection', (socket) => {

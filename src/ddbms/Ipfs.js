@@ -1,6 +1,7 @@
 class Ipfs {
   constructor (ipfs) {
     this.ipfs = ipfs
+    this.ID = 'ipfs'
   }
   add (object) {
     return this.ipfs.files.add(Buffer.from(JSON.stringify(object))).then(files => {
