@@ -49,19 +49,17 @@ module.exports = class Instance extends EventEmitter {
       token: token,
       ipfs_hash: parameters.hash,
       information: JSON.stringify(parameters.information),
-      protocol: protocol,
-      resource: sender
+      resource: protocol + '://' + sender
     }
     const { success } = await this.db.run(`
       INSERT INTO nodes (
         token,
         ipfs_hash,
         information,
-        protocol,
         resource,
         active
       ) VALUES
-      (?, ?, ?, ?, ?, 0)
+      (?, ?, ?, ?, 0)
       `, Object.values(queryParameters)
     )
     if (success) {

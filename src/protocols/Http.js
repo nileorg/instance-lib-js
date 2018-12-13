@@ -24,12 +24,16 @@ class Http {
         }
       })
   }
+  // I don't know if it actually works, we should also check that the host passed on the request matches the ip for security reasons.
+  getHostFromRequest (req) {
+    return req.headers.host.replace(/(^\w+:|^)\/\//, '')
+  }
   on (channel, action, resource, callback, response) {
     resource.onGet('/' + channel + '/' + action, (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       callback(
         this.ID,
-        req.domain_sender,
+        this.getHostFromRequest(req),
         req.params,
         (parameters) => res.end(JSON.stringify({
           channel: response.channel,
