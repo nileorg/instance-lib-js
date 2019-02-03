@@ -7,6 +7,8 @@ const server = require('http').createServer(handleRequest)
 const Httpdispatcher = require('httpdispatcher')
 var dispatcher = new Httpdispatcher()
 
+const PORT = 3334
+
 function handleRequest (request, response) {
   try {
     dispatcher.dispatch(request, response)
@@ -16,11 +18,13 @@ function handleRequest (request, response) {
 }
 
 const sqlite3 = require('sqlite3').verbose()
-const db = new sqlite3.Database('../var/instance.db')
+const path = require('path')
+const dbPath = path.resolve(__dirname, '../var/instance.db')
+const db = new sqlite3.Database(dbPath)
 
 // Initialize an websocket server
 const wsServer = require('socket.io')(server)
-server.listen(3334)
+server.listen(PORT)
 
 // initialize ipfs
 const IPFS = require('ipfs')
@@ -54,3 +58,5 @@ wsServer.on('connection', (socket) => {
 })
 
 instance.loadListeners(http.ID, dispatcher)
+
+console.log("Server listening on port:", PORT);
