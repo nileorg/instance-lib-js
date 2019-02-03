@@ -59,4 +59,4 @@ wsServer.on('connection', (socket) => {
 
 instance.loadListeners(http.ID, dispatcher)
 
-console.log("Server listening on port:", PORT);
+console.log('Server listening on port:', PORT)
