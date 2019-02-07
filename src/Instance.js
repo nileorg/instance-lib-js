@@ -12,29 +12,60 @@ module.exports = class Instance extends EventEmitter {
       nodes: [],
       clients: []
     }
+    this.bindings = [
+      {
+        channel: 'node.to.instance',
+        action: 'register',
+        callback: this.registerNode.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'registerConfirm'
+        }
+      },
+      {
+        channel: 'node.to.instance',
+        action: 'update',
+        callback: this.updateNode.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'updated'
+        }
+      },
+      {
+        channel: 'node.to.instance',
+        action: 'delete',
+        callback: this.deleteNode.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'deleted'
+        }
+      },
+      {
+        channel: 'node.to.instance',
+        action: 'login',
+        callback: this.loginNode.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'logged'
+        }
+      },
+      {
+        channel: 'node.to.instance',
+        action: 'ping',
+        callback: this.ping.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'pinged'
+        }
+      }
+    ]
   }
-  loadListeners (protocol, resource) {
-    this.protocols[protocol].on('node.to.instance', 'register', resource, this.registerNode.bind(this), {
-      channel: 'instance.to.node',
-      action: 'registerConfirm'
-    })
-    this.protocols[protocol].on('node.to.instance', 'update', resource, this.updateNode.bind(this), {
-      channel: 'instance.to.node',
-      action: 'updated'
-    })
-    this.protocols[protocol].on('node.to.instance', 'delete', resource, this.deleteNode.bind(this), {
-      channel: 'instance.to.node',
-      action: 'deleted'
-    })
-    this.protocols[protocol].on('node.to.instance', 'login', resource, this.loginNode.bind(this), {
-      channel: 'instance.to.node',
-      action: 'logged'
-    })
-    this.protocols[protocol].disconnect(resource, this.logoutNode.bind(this))
-    this.protocols[protocol].on('node.to.instance', 'ping', resource, this.ping.bind(this), {
-      channel: 'instance.to.node',
-      action: 'pinged'
-    })
+  loadListeners () {
+    for (let protocolId in this.protocols) {
+      let protocol = this.protocols[protocolId]
+      protocol.loadListeners(this.bindings)
+      protocol.disconnect(this.logoutNode.bind(this))
+    }
   }
   ping (protocol, sender, parameters, reply) {
     this.emit('ping', parameters)

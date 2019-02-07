@@ -1,16 +1,16 @@
 class WebSockets {
   constructor (ws) {
-    this.ws = ws
+    this.resource = ws
     this.ID = 'ws'
   }
   to (recipient, channel, action, parameters, response) {
     if (recipient) {
-      this.ws.to(recipient).emit(channel, {
+      this.resource.to(recipient).emit(channel, {
         action: action,
         parameters: parameters
       })
     } else {
-      this.ws.emit(channel, {
+      this.resource.emit(channel, {
         action: action,
         parameters: parameters
       })
@@ -32,8 +32,17 @@ class WebSockets {
       }
     })
   }
-  disconnect (resource, callback) {
-    resource.on('disconnect', () => callback(this.ID, resource.id))
+  disconnect (callback) {
+    this.resource.on('connection', socket => {
+      socket.on('disconnect', () => callback(this.ID, socket.id))
+    })
+  }
+  loadListeners (bindings) {
+    this.resource.on('connection', socket => {
+      bindings.forEach(binding => {
+        this.on(binding.channel, binding.action, socket, binding.callback, binding.response)
+      })
+    })
   }
 }
 

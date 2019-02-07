@@ -59,21 +59,14 @@ describe('Local instance test suite', function () {
     // initialize an http server
     http = require('http').createServer(handleRequest)
 
-    // create an object containing the protocols specifications
-    let protocols = {}
-    let wspro = new WsProtocol(ws)
-    let httppro = new HttpProtocol(http)
-    protocols[wspro.ID] = wspro
-    protocols[httppro.ID] = httppro
-
     // initialize the Instance with the object
     ipfsNode.on('ready', () => {
-      instance = new Instance(protocols, db, ddbms)
+      instance = new Instance({
+        'ws': new WsProtocol(ws),
+        'http': new HttpProtocol(dispatcher)
+      }, db, ddbms)
       // for each protocol initialize the listeners
-      ws.on('connection', socket => {
-        instance.loadListeners(wspro.ID, socket)
-      })
-      instance.loadListeners(httppro.ID, dispatcher)
+      instance.loadListeners()
       done()
     })
   })

@@ -1,7 +1,7 @@
 const fetch = require('node-fetch')
 class Http {
   constructor (http) {
-    this.http = http
+    this.resource = http
     this.ID = 'http'
   }
   to (recipient, channel, action, parameters, response) {
@@ -44,6 +44,11 @@ class Http {
     })
   }
   disconnect () {}
+  loadListeners (bindings) {
+    bindings.forEach(binding => {
+      this.on(binding.channel, binding.action, this.resource, binding.callback, binding.response)
+    })
+  }
 }
 
 exports['default'] = Http

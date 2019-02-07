@@ -43,20 +43,12 @@ let ddbms = {}
 const ipfsddbms = new Ipfs(ipfsNode)
 ddbms[ipfsddbms.ID] = ipfsddbms
 
-let protocols = {}
-let ws = new WebSockets(wsServer)
-let http = new Http(server)
-protocols[ws.ID] = ws
-protocols[http.ID] = http
 // Initialize the Instance with the object
+let instance = new Instance({
+  'ws': new WebSockets(wsServer),
+  'http': new Http(dispatcher)
+}, db, ddbms)
 
-let instance = new Instance(protocols, db, ddbms)
-
-// For each protocol initialize the listeners
-wsServer.on('connection', (socket) => {
-  instance.loadListeners(ws.ID, socket)
-})
-
-instance.loadListeners(http.ID, dispatcher)
+instance.loadListeners()
 
 console.log('Server listening on port:', PORT)
