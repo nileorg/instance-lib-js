@@ -82,17 +82,6 @@ describe('Local instance test suite', function () {
   describe("Testing instance's protocols", function () {
     let socket
     let httpNode
-    const assertResponse = function (res, action, parameters) {
-      expect(res, 'Response is not an object').to.be.an('object')
-      expect(res, 'Response action property is invalid').to.have.property(
-        'action',
-        action
-      )
-      expect(res, 'Response parameters are invalid').to.have.deep.property(
-        'parameters',
-        parameters
-      )
-    }
 
     before(function (done) {
       socket = io.connect('http://localhost:3334')
@@ -109,53 +98,6 @@ describe('Local instance test suite', function () {
       }
       httpNode.close()
       done()
-    })
-
-    describe('Testing WebSocket protocol', function () {
-      it('Should send messages to all sockets', function (done) {
-        instance.protocols['ws'].to(null, 'instance.to.test', 'test', {
-          success: true
-        })
-        socket.once('instance.to.test', res => {
-          assertResponse(res, 'test', { success: true })
-          done()
-        })
-      })
-      it('Should listen to a socket', function (done) {
-        socket.emit('node.to.instance', {
-          action: 'ping',
-          parameters: {
-            success: true
-          }
-        })
-        instance.on('ping', res => {
-          expect(res).to.have.property('success', true)
-          done()
-        })
-      })
-    })
-
-    describe('Testing HTTP protocol', function () {
-      it('Should send and reply to a message', function (done) {
-        instance.protocols['http'].to('http://localhost:8888/', 'instance.to.test', 'test', { success: true }, {
-          channel: 'test.to.instance',
-          action: 'testReceived',
-          callback: (protocol, sender, parameters) => {
-            assertResponse(parameters, 'testReceived', { success: true })
-            done()
-          }
-        })
-        dispatcher.onPost('/instance.to.test/test', (req, res) => {
-          res.writeHead(200, { 'Content-Type': 'application/json' })
-          const parameters = JSON.parse(req.body)
-          assertResponse(parameters, 'test', { success: true })
-          res.end(JSON.stringify({
-            channel: 'test.to.instance',
-            action: 'testReceived',
-            parameters: { success: true }
-          }))
-        })
-      })
     })
 
     describe('Testing IPFS', function () {
