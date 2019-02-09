@@ -9,19 +9,11 @@ let ipfsNode = null
 const io = require('socket.io-client')
 const Httpdispatcher = require('httpdispatcher')
 const dispatcher = new Httpdispatcher()
-function handleRequest (request, response) {
-  try {
-    dispatcher.dispatch(request, response)
-  } catch (err) {
-    console.log(err)
-  }
-}
 
 describe('Local instance test suite', function () {
   // increase test timeout to 10 seconds
   this.timeout(10000)
   let ws
-  let http
   let instance
   before(function (done) {
     // setup and run local instance (for both ws and http)
@@ -56,9 +48,6 @@ describe('Local instance test suite', function () {
     // initialize a websocket server
     ws = require('socket.io').listen(3334)
 
-    // initialize an http server
-    http = require('http').createServer(handleRequest)
-
     // initialize the Instance with the object
     ipfsNode.on('ready', () => {
       instance = new Instance({
@@ -72,46 +61,12 @@ describe('Local instance test suite', function () {
   })
 
   after(function (done) {
-    // kill local instance (ws server and http server)
+    // kill ws server and ipfs node
     ws.close()
-    http.close()
     ipfsNode.stop()
     done()
   })
 
-  describe("Testing instance's protocols", function () {
-    let socket
-    let httpNode
-
-    before(function (done) {
-      socket = io.connect('http://localhost:3334')
-      httpNode = require('http').createServer(handleRequest)
-      httpNode.listen(8888)
-      done()
-    })
-
-    after(function (done) {
-      if (socket.connected) {
-        socket.disconnect()
-      } else {
-        console.log('No socket connection to break...')
-      }
-      httpNode.close()
-      done()
-    })
-
-    describe('Testing IPFS', function () {
-      it('Should store and read data', async function () {
-        const obj1 = {
-          test: 'test'
-        }
-        const hash = await instance.ddbms['ipfs'].add(obj1)
-        expect(hash, 'Could not write to IPFS').to.not.equal(false)
-        const obj2 = await instance.ddbms['ipfs'].get(hash)
-        expect(obj2, 'Could not read IPFS').to.deep.equal(obj1)
-      })
-    })
-  })
   describe('Integration testing between Instance and Node/Client', function () {
     let socket
     const assertResponse = function (res, action) {

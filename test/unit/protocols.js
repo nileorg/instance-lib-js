@@ -1,22 +1,19 @@
 /* global describe before after it */
 const expect = require('chai').expect
-// protocol dependencies
-const io = require('socket.io-client')
+
+// initialize an http dispatcher
 const Httpdispatcher = require('httpdispatcher')
 const dispatcher = new Httpdispatcher()
-function handleRequest (request, response) {
-  try {
-    dispatcher.dispatch(request, response)
-  } catch (err) {
-    console.log(err)
-  }
-}
 
 describe("Testing instance's protocols", function () {
+  // increase test timeout to 10 seconds
+  this.timeout(10000)
+
   let instance
   let socket
   let ws
   let http
+
   const assertResponse = function (res, action, parameters) {
     expect(res, 'Response is not an object').to.be.an('object')
     expect(res, 'Response action property is invalid').to.have.property(
@@ -30,23 +27,42 @@ describe("Testing instance's protocols", function () {
   }
 
   before(function (done) {
+    // initialize a websocket client
+    const io = require('socket.io-client')
     socket = io.connect('http://localhost:3334')
+
+    // initialize a websocket server
+    ws = require('socket.io').listen(3334)
+
+    // initialize an http server
+    function handleRequest (request, response) {
+      try {
+        dispatcher.dispatch(request, response)
+      } catch (err) {
+        console.log(err)
+      }
+    }
     http = require('http').createServer(handleRequest)
     http.listen(8888)
+
+    // setup and run local instance (for both ws and http)
     const WsProtocol = require('../../src/protocols/WebSockets')
     const HttpProtocol = require('../../src/protocols/Http')
     const Instance = require('../../src/Instance')
-    ws = require('socket.io').listen(3334)
+
+    // initialize the Instance with the object
     instance = new Instance({
       'ws': new WsProtocol(ws),
       'http': new HttpProtocol(dispatcher)
     })
+
     // for each protocol initialize the listeners
     instance.loadListeners()
     done()
   })
 
   after(function (done) {
+    // kill local instance (ws client, ws server and http server)
     if (socket.connected) {
       socket.disconnect()
     } else {
