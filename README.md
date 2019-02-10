@@ -22,6 +22,6 @@ npm run test
 ```
 
 ## Contribute
-Join us on Discord https://discord.gg/je27JSc
+Join us on Discord: https://discord.gg/je27JSc
 
-Read the specifications here https://github.com/nileorg/nile-specifications
+Read the documentati  on here: https://docs.nile.shopping/ss
