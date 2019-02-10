@@ -57,6 +57,51 @@ module.exports = class Instance extends EventEmitter {
           channel: 'instance.to.node',
           action: 'pinged'
         }
+      },
+      {
+        channel: 'client.to.instance',
+        action: 'register',
+        callback: this.registerClient.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'registerConfirm'
+        }
+      },
+      {
+        channel: 'client.to.instance',
+        action: 'update',
+        callback: this.updateClient.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'updated'
+        }
+      },
+      {
+        channel: 'client.to.instance',
+        action: 'delete',
+        callback: this.deleteClient.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'deleted'
+        }
+      },
+      {
+        channel: 'client.to.instance',
+        action: 'login',
+        callback: this.loginClient.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'logged'
+        }
+      },
+      {
+        channel: 'client.to.instance',
+        action: 'ping',
+        callback: this.ping.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'pinged'
+        }
       }
     ]
   }
@@ -65,6 +110,7 @@ module.exports = class Instance extends EventEmitter {
       let protocol = this.protocols[protocolId]
       protocol.loadListeners(this.bindings)
       protocol.disconnect(this.logoutNode.bind(this))
+      protocol.disconnect(this.logoutClient.bind(this))
     }
   }
   ping (protocol, sender, parameters, reply) {
@@ -169,6 +215,90 @@ module.exports = class Instance extends EventEmitter {
   }
   logoutNode (protocol, sender) {
     this.online.nodes = this.online.nodes.filter(n => n.resource !== sender)
-    this.emit('disconnected')
+    this.emit('nodeDisconnects')
+  }
+  async registerClient (protocol, sender, parameters, reply) {
+    let token = randomstring.generate(5) + Date.now()
+    const queryParameters = {
+      token: token,
+      information: JSON.stringify(parameters.information),
+      resource: protocol + '://' + sender
+    }
+    const { success } = await this.db.run(`
+      INSERT INTO clients (
+        token,
+        information,
+        resource
+      ) VALUES
+      (?, ?, ?)
+      `, Object.values(queryParameters)
+    )
+    if (success) {
+      reply({ success: true, token: token })
+    } else {
+      reply({ success: false })
+    }
+  }
+  isClientTokenValid (token) {
+    return this.db.run('SELECT * FROM clients WHERE token = ?', [token])
+  }
+  async updateClient (protocol, sender, parameters, reply) {
+    const { success, results } = await this.isClientTokenValid(parameters.token)
+    if (success) {
+      const client = results[0]
+      const { success } = await this.db.run(`UPDATE clients
+        SET 
+          information = ? 
+        WHERE client_id = ?
+      `, [parameters.information, client.client_id])
+      if (success) {
+        reply({
+          success: true
+        })
+      } else {
+        reply({
+          success: false
+        })
+      }
+    }
+  }
+  async deleteClient (protocol, sender, parameters, reply) {
+    const { success, results } = await this.isClientTokenValid(parameters.token)
+    if (success) {
+      const client = results[0]
+      const { success } = await this.db.run('DELETE FROM clients WHERE client_id = ?', [client.client_id])
+      if (success) {
+        reply({
+          success: true
+        })
+        this.logoutClient(protocol, sender)
+      } else {
+        reply({
+          success: false
+        })
+      }
+    }
+  }
+  async loginClient (protocol, sender, parameters, reply) {
+    const { success, results } = await this.isClientTokenValid(parameters.token)
+    if (success) {
+      const client = results[0]
+      this.online.clients.push({
+        id: client.client_id,
+        resource: sender,
+        protocol: protocol
+      })
+      reply({
+        success: true
+      })
+    } else {
+      reply({
+        success: false
+      })
+    }
+  }
+  logoutClient (protocol, sender) {
+    this.online.clients = this.online.clients.filter(n => n.resource !== sender)
+    this.emit('clientDisconnects')
   }
 }

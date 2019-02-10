@@ -148,10 +148,10 @@ describe('Node Integration Test', function () {
     const onDisconnected = () => {
       const lengthAfterLogout = instance.online.nodes.length
       expect(lengthAfterLogout, 'Online nodes list didn\'t change').to.be.eq(lengthBeforeLogout - 1)
-      instance.removeListener('disconnected', onDisconnected)
+      instance.removeListener('nodeDisconnects', onDisconnected)
       done()
     }
-    instance.on('disconnected', onDisconnected)
+    instance.on('nodeDisconnects', onDisconnected)
   })
   it('Should delete existing node', function (done) {
     socket = io.connect('http://localhost:3334')
