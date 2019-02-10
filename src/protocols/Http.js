@@ -3,6 +3,7 @@ class Http {
   constructor (http) {
     this.resource = http
     this.ID = 'http'
+    this.needsQueue = false
   }
   to (recipient, channel, action, parameters, response) {
     fetch(recipient + channel + '/' + action, {

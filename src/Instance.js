@@ -102,8 +102,45 @@ module.exports = class Instance extends EventEmitter {
           channel: 'instance.to.client',
           action: 'pinged'
         }
+      },
+      {
+        channel: 'client.to.node',
+        callback: this.forwardClientToNode.bind(this)
       }
     ]
+  }
+  async forwardClientToNode (protocol, sender, parameters, reply, forwardObject) {
+    let onlineRecipient = this.online.nodes.find(n => n.id === forwardObject.recipient)
+    if (onlineRecipient) {
+      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, 'client.to.node', forwardObject.action, parameters)
+      reply({ msg: 'Message forwarded' })
+    } else {
+      const { success, results } = await this.db.run(` SELECT resource FROM nodes where node_id = ?`, forwardObject.recipient)
+      if (success) {
+        const resource = results[0].resource
+        // TODO: find a better regex to split ws://923u10hdashdsh into ['ws', '923u10hdashdsh']
+        const [, recipientProtocol, recipientResource] = resource.match(/(^\w+):\/\/([a-z0-9]+)/)
+        if (this.protocols[recipientProtocol].needsQueue) {
+          const { success, results } = await this.isClientTokenValid(parameters.token)
+          // we don't want to pass the token to the recipient !!! TODO: change the authentication system, put the token at the level of action, properties, recipient
+          parameters.token = ''
+          if (success) {
+            const client = results[0]
+            const { success } = await this.db.run(`
+              INSERT INTO queue 
+                (sender, recipient, message)
+              VALUES
+                (?, ?, ?)`, [client.client_id, forwardObject.recipient, parameters])
+            if (success) {
+              reply({ msg: 'Message stored in the queue' })
+            }
+          }
+        } else {
+          this.protocols[recipientProtocol].to(recipientResource, 'client.to.node', forwardObject.action, parameters)
+          reply({ msg: 'Message forwarded' })
+        }
+      }
+    }
   }
   loadListeners () {
     for (let protocolId in this.protocols) {

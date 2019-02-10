@@ -2,13 +2,22 @@ class WebSockets {
   constructor (ws) {
     this.resource = ws
     this.ID = 'ws'
+    this.needsQueue = true
   }
-  to (recipient, channel, action, parameters, response) {
-    if (recipient) {
-      this.resource.to(recipient).emit(channel, {
-        action: action,
-        parameters: parameters
-      })
+  to (delivery, channel, action, parameters, response) {
+    if (delivery) {
+      if (typeof delivery === 'object') {
+        this.resource.to(delivery.mediator).emit(channel, {
+          action: action,
+          parameters: parameters,
+          recipient: delivery.recipient
+        })
+      } else if (typeof delivery === 'string') {
+        this.resource.to(delivery).emit(channel, {
+          action: action,
+          parameters: parameters
+        })
+      }
     } else {
       this.resource.emit(channel, {
         action: action,
@@ -22,12 +31,13 @@ class WebSockets {
   on (channel, action, resource, callback, response) {
     let resourceId = resource.id
     resource.on(channel, data => {
-      if (data.action === action) {
+      if (!action || data.action === action) {
         callback(
           this.ID,
           resourceId,
           data.parameters,
-          (parameters) => this.to(resourceId, response.channel, response.action, parameters, { listen: null, resource })
+          (parameters) => this.to(resourceId, response.channel, response.action, parameters, { listen: null, resource }),
+          { recipient: data.recipient, action: action }
         )
       }
     })
