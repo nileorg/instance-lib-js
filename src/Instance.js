@@ -214,7 +214,9 @@ module.exports = class Instance extends EventEmitter {
     }
   }
   logoutNode (protocol, sender) {
-    this.online.nodes = this.online.nodes.filter(n => n.resource !== sender)
+    this.online.nodes = this.online.nodes.filter(n => {
+      return !(n.resource === sender && n.protocol === protocol)
+    })
     this.emit('nodeDisconnects')
   }
   async registerClient (protocol, sender, parameters, reply) {
@@ -298,7 +300,9 @@ module.exports = class Instance extends EventEmitter {
     }
   }
   logoutClient (protocol, sender) {
-    this.online.clients = this.online.clients.filter(n => n.resource !== sender)
+    this.online.clients = this.online.clients.filter(n => {
+      return !(n.resource === sender && n.protocol === protocol)
+    })
     this.emit('clientDisconnects')
   }
 }
