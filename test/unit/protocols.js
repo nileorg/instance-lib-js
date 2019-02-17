@@ -27,10 +27,6 @@ describe("Testing instance's protocols", function () {
   }
 
   before(function (done) {
-    // initialize a websocket client
-    const io = require('socket.io-client')
-    socket = io.connect('http://localhost:3334')
-
     // initialize a websocket server
     ws = require('socket.io').listen(3334)
 
@@ -58,7 +54,13 @@ describe("Testing instance's protocols", function () {
 
     // for each protocol initialize the listeners
     instance.loadListeners()
-    done()
+
+    // initialize a websocket client
+    const io = require('socket.io-client')
+    socket = io.connect('http://localhost:3334')
+    socket.on('connect', function () {
+      done()
+    })
   })
 
   after(function (done) {
@@ -75,12 +77,12 @@ describe("Testing instance's protocols", function () {
 
   describe('Testing WebSocket protocol', function () {
     it('Should send messages to all sockets', function (done) {
-      instance.protocols['ws'].to(null, 'instance.to.test', 'test', {
-        success: true
-      })
       socket.once('instance.to.test', res => {
         assertResponse(res, 'test', { success: true })
         done()
+      })
+      instance.protocols['ws'].to(null, 'instance.to.test', 'test', {
+        success: true
       })
     })
     it('Should listen to a socket', function (done) {
