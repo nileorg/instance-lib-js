@@ -109,16 +109,15 @@ module.exports = class Instance extends EventEmitter {
       }
     ]
   }
-  async forwardClientToNode (protocol, sender, parameters, reply, forwardObject) {
-    let onlineRecipient = this.online.nodes.find(n => n.id === forwardObject.recipient)
+  async forwardClientToNode (protocol, sender, parameters, reply, forwardObject, resource) {
+    let onlineRecipient = this.online.nodes.find(n => n.id === forwardObject.recipientObject.recipient)
     if (onlineRecipient) {
-      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, 'client.to.node', forwardObject.action, parameters)
+      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, 'client.to.node', forwardObject.action, parameters, null, resource)
       reply({ msg: 'Message forwarded' })
     } else {
-      const { success, results } = await this.db.run(` SELECT resource FROM nodes where node_id = ?`, forwardObject.recipient)
+      const { success, results } = await this.db.run(` SELECT resource FROM nodes where node_id = ?`, forwardObject.recipientObject.recipient)
       if (success) {
         const resource = results[0].resource
-        // TODO: find a better regex to split ws://923u10hdashdsh into ['ws', '923u10hdashdsh']
         const [, recipientProtocol, recipientResource] = resource.match(/(^\w+):\/\/([a-z0-9]+)/)
         if (this.protocols[recipientProtocol].needsQueue) {
           const { success, results } = await this.isClientTokenValid(parameters.token)
@@ -242,7 +241,8 @@ module.exports = class Instance extends EventEmitter {
       })
       reply({
         success: true,
-        components: node.components
+        components: node.components,
+        id: node.node_id
       })
     } else {
       reply({
