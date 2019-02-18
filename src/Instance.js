@@ -110,30 +110,38 @@ module.exports = class Instance extends EventEmitter {
           channel: 'instance.to.client',
           action: 'forwarded'
         }
+      },
+      {
+        channel: 'node.to.client',
+        callback: this.forwardNodeToClient.bind(this),
+        response: {
+          channel: 'instance.to.node',
+          action: 'forwarded'
+        }
       }
     ]
   }
-  async forwardClientToNode (protocol, sender, parameters, reply, forwardObject, resource) {
-    let onlineRecipient = this.online.nodes.find(n => n.id === forwardObject.recipientObject.recipient)
+  async forward ({ online, channel, tableRecipient, primaryKeyRecipient, primaryKeySender, getByToken }, protocol, sender, parameters, reply, forwardObject, resource) {
+    let onlineRecipient = online.find(n => n.id === forwardObject.recipientObject.recipient)
     if (onlineRecipient) {
-      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, 'client.to.node', forwardObject.action, parameters, null, resource)
+      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, channel, forwardObject.action, parameters, null, resource)
       reply({ success: true, type: 'forward' })
     } else {
-      const { success, results } = await this.db.run(` SELECT resource FROM nodes where node_id = ?`, forwardObject.recipientObject.recipient)
+      const { success, results } = await this.db.run(` SELECT resource FROM ${tableRecipient} where ${primaryKeyRecipient} = ?`, forwardObject.recipientObject.recipient)
       if (success) {
         let resource = results[0].resource
         const [, recipientProtocol] = resource.match(/(^\w+):\/\/(.+)/)
         if (this.protocols[recipientProtocol].needsQueue) {
-          const { success, results } = await this.isClientTokenValid(parameters.token)
+          const { success, results } = await getByToken(parameters.token)
           // we don't want to pass the token to the recipient !!! TODO: change the authentication system, put the token at the level of action, properties, recipient
           parameters.token = ''
           if (success) {
-            const client = results[0]
+            const entity = results[0]
             const { success } = await this.db.run(`
               INSERT INTO queue 
                 (sender, recipient, message)
               VALUES
-                (?, ?, ?)`, [client.client_id, forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
+                (?, ?, ?)`, [entity[primaryKeySender], forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
             if (success) {
               reply({ success: true, type: 'queue' })
             }
@@ -141,6 +149,12 @@ module.exports = class Instance extends EventEmitter {
         }
       }
     }
+  }
+  async forwardClientToNode (protocol, sender, parameters, reply, forwardObject, resource) {
+    this.forward({ online: this.online.nodes, channel: 'client.to.node', tableRecipient: 'nodes', primaryKeyRecipient: 'node_id', primaryKeySender: 'client_id', getByToken: this.isClientTokenValid.bind(this) }, protocol, sender, parameters, reply, forwardObject, resource)
+  }
+  async forwardNodeToClient (protocol, sender, parameters, reply, forwardObject, resource) {
+    this.forward({ online: this.online.clients, channel: 'node.to.client', tableRecipient: 'clients', primaryKeyRecipient: 'client_id', primaryKeySender: 'node_id', getByToken: this.isNodeTokenValid.bind(this) }, protocol, sender, parameters, reply, forwardObject, resource)
   }
   loadListeners () {
     for (let protocolId in this.protocols) {
@@ -279,7 +293,12 @@ module.exports = class Instance extends EventEmitter {
       `, Object.values(queryParameters)
     )
     if (success) {
-      reply({ success: true, token: token })
+      const { success, results } = await this.isClientTokenValid(token)
+      if (success) {
+        reply({ success: true, token: token, id: results[0].client_id })
+      } else {
+        reply({ success: false })
+      }
     } else {
       reply({ success: false })
     }
@@ -334,7 +353,8 @@ module.exports = class Instance extends EventEmitter {
         protocol: protocol
       })
       reply({
-        success: true
+        success: true,
+        id: client.client_id
       })
     } else {
       reply({

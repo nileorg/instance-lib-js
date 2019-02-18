@@ -7,6 +7,7 @@ let ipfsNode = null
 
 // protocol dependencies
 const io = require('socket.io-client')
+const ioClient = require('socket.io-client')
 const Httpdispatcher = require('httpdispatcher')
 const dispatcher = new Httpdispatcher()
 
@@ -15,6 +16,7 @@ describe('Node Integration Test', function () {
   let ws
   let instance
   let socket
+  let socketClient
   let token = null
   const assertResponse = function (res, action) {
     expect(res, 'Response is not an object').to.be.an('object')
@@ -70,6 +72,7 @@ describe('Node Integration Test', function () {
       // for each protocol initialize the listeners
       instance.loadListeners()
       socket = io.connect('http://localhost:3334')
+      socketClient = ioClient.connect('http://localhost:3334')
       done()
     })
   })
@@ -79,6 +82,11 @@ describe('Node Integration Test', function () {
       socket.disconnect()
     } else {
       console.log('No socket connection to break...')
+    }
+    if (socketClient.connected) {
+      socketClient.disconnect()
+    } else {
+      console.log('No socketClient connection to break...')
     }
     ws.close()
     ipfsNode.stop()
@@ -165,5 +173,132 @@ describe('Node Integration Test', function () {
         token: token
       }
     })
+  })
+  it('Should forward a message from node to an online client through instance', function (done) {
+    let tokenClient
+    let tokenNode
+    function loginClient () {
+      socketClient.once('instance.to.client', res => {
+        assertResponse(res, 'logged')
+        socketClient.once('node.to.client', function (res) {
+          assertResponse(res, 'test')
+          done()
+        })
+        socket.emit('node.to.client', {
+          action: 'test',
+          recipient: {
+            recipient: res.parameters.id
+          },
+          parameters: {
+            token: tokenNode,
+            success: true
+          }
+        })
+      })
+      socketClient.emit('client.to.instance', {
+        action: 'login',
+        parameters: {
+          token: tokenClient
+        }
+      })
+    }
+    function registerClient () {
+      socketClient.once('instance.to.client', res => {
+        tokenClient = res.parameters.token
+        assertResponse(res, 'registerConfirm')
+        loginClient()
+      })
+      socketClient.emit('client.to.instance', {
+        action: 'register',
+        parameters: {
+          information: '{ name: "test_client" }'
+        }
+      })
+    }
+    function loginNode () {
+      socket.once('instance.to.node', res => {
+        assertResponse(res, 'logged')
+        registerClient()
+      })
+      socket.emit('node.to.instance', {
+        action: 'login',
+        parameters: {
+          token: tokenNode
+        }
+      })
+    }
+    function registerNode () {
+      socket.once('instance.to.node', res => {
+        tokenNode = res.parameters.token
+        assertResponse(res, 'registerConfirm')
+        loginNode()
+      })
+      instance.ddbms['ipfs'].add([]).then(hash => {
+        socket.emit('node.to.instance', {
+          action: 'register',
+          parameters: {
+            components: 'ipfs://' + hash,
+            information: '{ name: "test_node" }'
+          }
+        })
+      })
+    }
+    registerNode()
+  })
+  it('Should forward a message from client to an offline node through instance, saving the message in the queue', function (done) {
+    let tokenNode
+    function registerClient () {
+      socketClient.once('instance.to.client', res => {
+        assertResponse(res, 'registerConfirm')
+        socket.once('instance.to.node', res => {
+          assertResponse(res, 'forwarded')
+          done()
+        })
+        socket.emit('node.to.client', {
+          action: 'test',
+          recipient: {
+            recipient: res.parameters.id
+          },
+          parameters: {
+            token: tokenNode
+          }
+        })
+      })
+      socketClient.emit('client.to.instance', {
+        action: 'register',
+        parameters: {
+          information: '{ name: "test_client" }'
+        }
+      })
+    }
+    function loginNode () {
+      socket.once('instance.to.node', res => {
+        assertResponse(res, 'logged')
+        registerClient()
+      })
+      socket.emit('node.to.instance', {
+        action: 'login',
+        parameters: {
+          token: tokenNode
+        }
+      })
+    }
+    function registerNode () {
+      socket.once('instance.to.node', res => {
+        tokenNode = res.parameters.token
+        assertResponse(res, 'registerConfirm')
+        loginNode()
+      })
+      instance.ddbms['ipfs'].add([]).then(hash => {
+        socket.emit('node.to.instance', {
+          action: 'register',
+          parameters: {
+            components: 'ipfs://' + hash,
+            information: '{ name: "test_node" }'
+          }
+        })
+      })
+    }
+    registerNode()
   })
 })
