@@ -155,7 +155,7 @@ describe('Client Integration Test', function () {
       }
     })
   })
-  it('Should forward a message from client to node through instance', function (done) {
+  it('Should forward a message from client to an online node through instance', function (done) {
     let tokenNode
     let tokenClient
     function loginNode () {
@@ -170,7 +170,6 @@ describe('Client Integration Test', function () {
         socket.emit('client.to.node', {
           action: 'test',
           recipient: {
-            mediator: 'http://localhost:3334',
             recipient: res.parameters.id
           },
           parameters: {
@@ -191,6 +190,62 @@ describe('Client Integration Test', function () {
         tokenNode = res.parameters.token
         assertResponse(res, 'registerConfirm')
         loginNode()
+      })
+      instance.ddbms['ipfs'].add([]).then(hash => {
+        socketNode.emit('node.to.instance', {
+          action: 'register',
+          parameters: {
+            components: 'ipfs://' + hash,
+            information: '{ name: "test_node" }'
+          }
+        })
+      })
+    }
+    function loginClient () {
+      socket.once('instance.to.client', res => {
+        assertResponse(res, 'logged')
+        registerNode()
+      })
+      socket.emit('client.to.instance', {
+        action: 'login',
+        parameters: {
+          token: tokenClient
+        }
+      })
+    }
+    function registerClient () {
+      socket.once('instance.to.client', res => {
+        tokenClient = res.parameters.token
+        assertResponse(res, 'registerConfirm')
+        loginClient()
+      })
+      socket.emit('client.to.instance', {
+        action: 'register',
+        parameters: {
+          information: '{ name: "test_client" }'
+        }
+      })
+    }
+    registerClient()
+  })
+  it('Should forward a message from client to an offline node through instance, saving the message in the queue', function (done) {
+    let tokenClient
+    function registerNode () {
+      socketNode.once('instance.to.node', res => {
+        assertResponse(res, 'registerConfirm')
+        socket.once('instance.to.client', res => {
+          assertResponse(res, 'forwarded')
+          done()
+        })
+        socket.emit('client.to.node', {
+          action: 'test',
+          recipient: {
+            recipient: res.parameters.id
+          },
+          parameters: {
+            token: tokenClient
+          }
+        })
       })
       instance.ddbms['ipfs'].add([]).then(hash => {
         socketNode.emit('node.to.instance', {

@@ -105,7 +105,11 @@ module.exports = class Instance extends EventEmitter {
       },
       {
         channel: 'client.to.node',
-        callback: this.forwardClientToNode.bind(this)
+        callback: this.forwardClientToNode.bind(this),
+        response: {
+          channel: 'instance.to.client',
+          action: 'forwarded'
+        }
       }
     ]
   }
@@ -113,12 +117,12 @@ module.exports = class Instance extends EventEmitter {
     let onlineRecipient = this.online.nodes.find(n => n.id === forwardObject.recipientObject.recipient)
     if (onlineRecipient) {
       this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, 'client.to.node', forwardObject.action, parameters, null, resource)
-      reply({ msg: 'Message forwarded' })
+      reply({ success: true, type: 'forward' })
     } else {
       const { success, results } = await this.db.run(` SELECT resource FROM nodes where node_id = ?`, forwardObject.recipientObject.recipient)
       if (success) {
-        const resource = results[0].resource
-        const [, recipientProtocol, recipientResource] = resource.match(/(^\w+):\/\/([a-z0-9]+)/)
+        let resource = results[0].resource
+        const [, recipientProtocol] = resource.match(/(^\w+):\/\/(.+)/)
         if (this.protocols[recipientProtocol].needsQueue) {
           const { success, results } = await this.isClientTokenValid(parameters.token)
           // we don't want to pass the token to the recipient !!! TODO: change the authentication system, put the token at the level of action, properties, recipient
@@ -129,14 +133,11 @@ module.exports = class Instance extends EventEmitter {
               INSERT INTO queue 
                 (sender, recipient, message)
               VALUES
-                (?, ?, ?)`, [client.client_id, forwardObject.recipient, parameters])
+                (?, ?, ?)`, [client.client_id, forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
             if (success) {
-              reply({ msg: 'Message stored in the queue' })
+              reply({ success: true, type: 'queue' })
             }
           }
-        } else {
-          this.protocols[recipientProtocol].to(recipientResource, 'client.to.node', forwardObject.action, parameters)
-          reply({ msg: 'Message forwarded' })
         }
       }
     }
@@ -179,7 +180,12 @@ module.exports = class Instance extends EventEmitter {
       const ddbms = protocolRegex[0].replace('://', '')
       const components = parameters.components.replace(/(^\w+:|^)\/\//, '')
       await this.ddbms[ddbms].save(components).catch(e => {})
-      reply({ success: true, token: token })
+      const { success, results } = await this.isNodeTokenValid(token)
+      if (success) {
+        reply({ success: true, token: token, id: results[0].node_id })
+      } else {
+        reply({ success: false })
+      }
     } else {
       reply({ success: false })
     }
