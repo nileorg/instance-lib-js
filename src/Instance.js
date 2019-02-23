@@ -1,6 +1,8 @@
 const EventEmitter = require('events')
 const randomstring = require('randomstring')
 const Db = require('./Db')
+const Node = require('./models/Node')
+const Client = require('./models/Client')
 
 module.exports = class Instance extends EventEmitter {
   constructor (protocols, db, ddbms) {
@@ -8,6 +10,10 @@ module.exports = class Instance extends EventEmitter {
     this.protocols = protocols
     this.db = new Db(db)
     this.ddbms = ddbms
+    this.models = {
+      node: new Node(this.db),
+      client: new Client(this.db)
+    }
     this.online = {
       nodes: [],
       clients: []
@@ -121,18 +127,20 @@ module.exports = class Instance extends EventEmitter {
       }
     ]
   }
-  async forward ({ online, channel, tableRecipient, primaryKeyRecipient, primaryKeySender, getByToken }, protocol, sender, parameters, reply, forwardObject, resource) {
-    let onlineRecipient = online.find(n => n.id === forwardObject.recipientObject.recipient)
+  async forward ({ senderType, recipientType }, protocol, sender, parameters, reply, forwardObject, resource) {
+    let onlineRecipient = this.online[recipientType + 's'].find(n => n.id === forwardObject.recipientObject.recipient)
     if (onlineRecipient) {
-      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, channel, forwardObject.action, parameters, null, resource)
+      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, senderType + '.to.' + recipientType, forwardObject.action, parameters, null, resource)
       reply({ success: true, type: 'forward' })
     } else {
-      const { success, results } = await this.db.run(` SELECT resource FROM ${tableRecipient} where ${primaryKeyRecipient} = ?`, forwardObject.recipientObject.recipient)
+      const { success, results } = await this.db.run(` SELECT resource FROM ${recipientType}s where ${recipientType}_id = ?`, forwardObject.recipientObject.recipient)
       if (success) {
         let resource = results[0].resource
         const [, recipientProtocol] = resource.match(/(^\w+):\/\/(.+)/)
         if (this.protocols[recipientProtocol].needsQueue) {
-          const { success, results } = await getByToken(parameters.token)
+          const { success, results } = await this.models[senderType].getByToken({
+            token: parameters.token
+          })
           // we don't want to pass the token to the recipient !!! TODO: change the authentication system, put the token at the level of action, properties, recipient
           parameters.token = ''
           if (success) {
@@ -141,7 +149,7 @@ module.exports = class Instance extends EventEmitter {
               INSERT INTO queue 
                 (sender, recipient, message)
               VALUES
-                (?, ?, ?)`, [entity[primaryKeySender], forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
+                (?, ?, ?)`, [entity[senderType + '_id'], forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
             if (success) {
               reply({ success: true, type: 'queue' })
             }
@@ -151,10 +159,10 @@ module.exports = class Instance extends EventEmitter {
     }
   }
   async forwardClientToNode (protocol, sender, parameters, reply, forwardObject, resource) {
-    this.forward({ online: this.online.nodes, channel: 'client.to.node', tableRecipient: 'nodes', primaryKeyRecipient: 'node_id', primaryKeySender: 'client_id', getByToken: this.isClientTokenValid.bind(this) }, protocol, sender, parameters, reply, forwardObject, resource)
+    this.forward({ senderType: 'client', recipientType: 'node' }, protocol, sender, parameters, reply, forwardObject, resource)
   }
   async forwardNodeToClient (protocol, sender, parameters, reply, forwardObject, resource) {
-    this.forward({ online: this.online.clients, channel: 'node.to.client', tableRecipient: 'clients', primaryKeyRecipient: 'client_id', primaryKeySender: 'node_id', getByToken: this.isNodeTokenValid.bind(this) }, protocol, sender, parameters, reply, forwardObject, resource)
+    this.forward({ senderType: 'node', recipientType: 'client' }, protocol, sender, parameters, reply, forwardObject, resource)
   }
   loadListeners () {
     for (let protocolId in this.protocols) {
@@ -172,23 +180,12 @@ module.exports = class Instance extends EventEmitter {
   }
   async registerNode (protocol, sender, parameters, reply) {
     let token = randomstring.generate(5) + Date.now()
-    const queryParameters = {
+    const success = this.models.node.create({
       token: token,
       components: parameters.components,
       information: JSON.stringify(parameters.information),
       resource: protocol + '://' + sender
-    }
-    const { success } = await this.db.run(`
-      INSERT INTO nodes (
-        token,
-        components,
-        information,
-        resource,
-        active
-      ) VALUES
-      (?, ?, ?, ?, 0)
-      `, Object.values(queryParameters)
-    )
+    })
     if (success) {
       const protocolRegex = parameters.components.match(/(^\w+:|^)\/\//)
       const ddbms = protocolRegex[0].replace('://', '')
@@ -205,18 +202,19 @@ module.exports = class Instance extends EventEmitter {
     }
   }
   isNodeTokenValid (token) {
-    return this.db.run('SELECT * FROM nodes WHERE token = ?', [token])
+    return this.models.node.getByToken({
+      token: token
+    })
   }
   async updateNode (protocol, sender, parameters, reply) {
     const { success, results } = await this.isNodeTokenValid(parameters.token)
     if (success) {
       const node = results[0]
-      const { success } = await this.db.run(`UPDATE nodes
-        SET 
-          components = ?,
-          information = ? 
-        WHERE node_id = ?
-      `, [parameters.components, parameters.information, node.node_id])
+      const success = this.models.node.update({
+        components: parameters.components,
+        information: parameters.information,
+        nodeId: node.node_id
+      })
       if (success) {
         const updatedOnlineNode = this.online.nodes.find(n => n.id === node.node_id)
         if (updatedOnlineNode) {
@@ -236,7 +234,9 @@ module.exports = class Instance extends EventEmitter {
     const { success, results } = await this.isNodeTokenValid(parameters.token)
     if (success) {
       const node = results[0]
-      const { success } = await this.db.run('DELETE FROM nodes WHERE node_id = ?', [node.node_id])
+      const success = await this.models.node.delete({
+        nodeId: node.node_id
+      })
       if (success) {
         reply({
           success: true

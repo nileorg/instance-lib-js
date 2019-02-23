@@ -8,7 +8,7 @@
     "test": "standard && mocha --recursive",
     "lint": "standard --fix",
     "migrate": "db-migrate",
-    "postinstall": "nodetouch var/instance.db && db-migrate up"
+    "postinstall": "node_modules/.bin/nodetouch var/instance.db && db-migrate up"
   },
   "repository": {
     "type": "git",
