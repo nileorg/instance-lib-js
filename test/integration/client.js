@@ -113,7 +113,7 @@ describe('Client Integration Test', function () {
     })
     socket.emit('client.to.instance', {
       action: 'login',
-      parameters: {
+      authentication: {
         token: token
       }
     })
@@ -126,8 +126,10 @@ describe('Client Integration Test', function () {
     socket.emit('client.to.instance', {
       action: 'update',
       parameters: {
-        token: token,
         information: '{ name: "test_client_updated" }'
+      },
+      authentication: {
+        token: token
       }
     })
   })
@@ -150,7 +152,7 @@ describe('Client Integration Test', function () {
     })
     socket.emit('client.to.instance', {
       action: 'delete',
-      parameters: {
+      authentication: {
         token: token
       }
     })
@@ -173,14 +175,16 @@ describe('Client Integration Test', function () {
             recipient: res.parameters.id
           },
           parameters: {
-            token: tokenClient,
             success: true
+          },
+          authentication: {
+            token: tokenClient
           }
         })
       })
       socketNode.emit('node.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenNode
         }
       })
@@ -208,7 +212,7 @@ describe('Client Integration Test', function () {
       })
       socket.emit('client.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenClient
         }
       })
@@ -242,7 +246,7 @@ describe('Client Integration Test', function () {
           recipient: {
             recipient: res.parameters.id
           },
-          parameters: {
+          authentication: {
             token: tokenClient
           }
         })
@@ -264,7 +268,7 @@ describe('Client Integration Test', function () {
       })
       socket.emit('client.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenClient
         }
       })

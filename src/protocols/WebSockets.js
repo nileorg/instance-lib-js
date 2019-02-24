@@ -36,6 +36,7 @@ class WebSockets {
           this.ID,
           resourceId,
           data.parameters,
+          data.authentication,
           (parameters) => this.to(resourceId, response ? response.channel : null, response ? response.action : null, parameters, { listen: null, resource }),
           { recipientObject: data.recipient, action: data.action }
         )

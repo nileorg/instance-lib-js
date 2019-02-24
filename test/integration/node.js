@@ -131,7 +131,7 @@ describe('Node Integration Test', function () {
     })
     socket.emit('node.to.instance', {
       action: 'login',
-      parameters: {
+      authentication: {
         token: token
       }
     })
@@ -144,9 +144,11 @@ describe('Node Integration Test', function () {
     socket.emit('node.to.instance', {
       action: 'update',
       parameters: {
-        token: token,
         components: 'ipfs://QmQEf7RF89vV5afzM9B7mrfTTprnHuthLCs414fYJ7rzbZ',
         information: '{ name: "test_node_updated" }'
+      },
+      authentication: {
+        token: token
       }
     })
   })
@@ -169,7 +171,7 @@ describe('Node Integration Test', function () {
     })
     socket.emit('node.to.instance', {
       action: 'delete',
-      parameters: {
+      authentication: {
         token: token
       }
     })
@@ -190,14 +192,16 @@ describe('Node Integration Test', function () {
             recipient: res.parameters.id
           },
           parameters: {
-            token: tokenNode,
             success: true
+          },
+          authentication: {
+            token: tokenNode
           }
         })
       })
       socketClient.emit('client.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenClient
         }
       })
@@ -222,7 +226,7 @@ describe('Node Integration Test', function () {
       })
       socket.emit('node.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenNode
         }
       })
@@ -259,7 +263,7 @@ describe('Node Integration Test', function () {
           recipient: {
             recipient: res.parameters.id
           },
-          parameters: {
+          authentication: {
             token: tokenNode
           }
         })
@@ -278,7 +282,7 @@ describe('Node Integration Test', function () {
       })
       socket.emit('node.to.instance', {
         action: 'login',
-        parameters: {
+        authentication: {
           token: tokenNode
         }
       })

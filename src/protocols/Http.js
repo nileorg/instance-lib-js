@@ -36,6 +36,7 @@ class Http {
         this.ID,
         this.getHostFromRequest(req),
         req.params,
+        req.headers.Authentication,
         (parameters) => res.end(JSON.stringify({
           channel: response.channel,
           action: response.action,
