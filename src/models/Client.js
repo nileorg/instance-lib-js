@@ -2,12 +2,12 @@ module.exports = class Client {
   constructor (db) {
     this.db = db
   }
-  async create ({ token, components, information, resource }) {
+  async create ({ token, information, resource }) {
     const { success } = await this.db.run(`
           INSERT INTO clients (
           token,
           information,
-          resource,
+          resource
           ) VALUES
           (?, ?, ?)
       `, [
@@ -23,12 +23,12 @@ module.exports = class Client {
   async getById ({ primaryKey }) {
     return this.db.run('SELECT * FROM clients WHERE client_id = ?', [primaryKey])
   }
-  async update ({ components, information, clientId }) {
+  async update ({ information, clientId }) {
     const { success } = await this.db.run(`UPDATE clients
       SET 
         information = ? 
      WHERE client_id = ?
-   `, [components, information, clientId])
+   `, [information, clientId])
     return success
   }
   async delete ({ clientId }) {

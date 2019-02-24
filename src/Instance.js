@@ -278,20 +278,11 @@ module.exports = class Instance extends EventEmitter {
   }
   async registerClient (protocol, sender, parameters, reply) {
     let token = randomstring.generate(5) + Date.now()
-    const queryParameters = {
+    const success = await this.models.client.create({
       token: token,
       information: JSON.stringify(parameters.information),
       resource: protocol + '://' + sender
-    }
-    const { success } = await this.db.run(`
-      INSERT INTO clients (
-        token,
-        information,
-        resource
-      ) VALUES
-      (?, ?, ?)
-      `, Object.values(queryParameters)
-    )
+    })
     if (success) {
       const { success, results } = await this.isClientTokenValid(token)
       if (success) {
@@ -304,17 +295,18 @@ module.exports = class Instance extends EventEmitter {
     }
   }
   isClientTokenValid (token) {
-    return this.db.run('SELECT * FROM clients WHERE token = ?', [token])
+    return this.models.client.getByToken({
+      token: token
+    })
   }
   async updateClient (protocol, sender, parameters, reply) {
     const { success, results } = await this.isClientTokenValid(parameters.token)
     if (success) {
       const client = results[0]
-      const { success } = await this.db.run(`UPDATE clients
-        SET 
-          information = ? 
-        WHERE client_id = ?
-      `, [parameters.information, client.client_id])
+      const success = await this.models.client.update({
+        information: parameters.information,
+        clientId: client.client_id
+      })
       if (success) {
         reply({
           success: true
@@ -330,7 +322,9 @@ module.exports = class Instance extends EventEmitter {
     const { success, results } = await this.isClientTokenValid(parameters.token)
     if (success) {
       const client = results[0]
-      const { success } = await this.db.run('DELETE FROM clients WHERE client_id = ?', [client.client_id])
+      const success = await this.models.client.delete({
+        clientId: client.client_id
+      })
       if (success) {
         reply({
           success: true
