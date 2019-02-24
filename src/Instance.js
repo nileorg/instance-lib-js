@@ -129,10 +129,10 @@ module.exports = class Instance extends EventEmitter {
       }
     ]
   }
-  async forward ({ senderType, recipientType }, protocol, sender, parameters, authentication, reply, forwardObject, resource) {
+  async forward ({ senderType, recipientType }, protocol, sender, parameters, authentication, reply, forwardObject) {
     let onlineRecipient = this.online[recipientType + 's'].find(n => n.id === forwardObject.recipientObject.recipient)
     if (onlineRecipient) {
-      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, senderType + '.to.' + recipientType, forwardObject.action, parameters, null, resource)
+      this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, senderType + '.to.' + recipientType, forwardObject.action, parameters, null)
       reply({ success: true, type: 'forward' })
     } else {
       const { success, results } = await this.models[recipientType].getById({
@@ -160,11 +160,11 @@ module.exports = class Instance extends EventEmitter {
       }
     }
   }
-  async forwardClientToNode (protocol, sender, parameters, authentication, reply, forwardObject, resource) {
-    this.forward({ senderType: 'client', recipientType: 'node' }, protocol, sender, parameters, authentication, reply, forwardObject, resource)
+  async forwardClientToNode ({ protocol, sender, parameters, authentication, reply, forwardObject }) {
+    this.forward({ senderType: 'client', recipientType: 'node' }, protocol, sender, parameters, authentication, reply, forwardObject)
   }
-  async forwardNodeToClient (protocol, sender, parameters, authentication, reply, forwardObject, resource) {
-    this.forward({ senderType: 'node', recipientType: 'client' }, protocol, sender, parameters, authentication, reply, forwardObject, resource)
+  async forwardNodeToClient ({ protocol, sender, parameters, authentication, reply, forwardObject }) {
+    this.forward({ senderType: 'node', recipientType: 'client' }, protocol, sender, parameters, authentication, reply, forwardObject)
   }
   loadListeners () {
     for (let protocolId in this.protocols) {
@@ -174,13 +174,13 @@ module.exports = class Instance extends EventEmitter {
       protocol.disconnect(this.logoutClient.bind(this))
     }
   }
-  ping (protocol, sender, parameters, authentication, reply) {
+  ping ({ protocol, sender, parameters, authentication, reply }) {
     this.emit('ping', parameters)
     reply({
       success: true
     })
   }
-  async registerNode (protocol, sender, parameters, authentication, reply) {
+  async registerNode ({ protocol, sender, parameters, authentication, reply }) {
     let token = randomstring.generate(5) + Date.now()
     const success = this.models.node.create({
       token: token,
@@ -208,7 +208,7 @@ module.exports = class Instance extends EventEmitter {
       token: token
     })
   }
-  async updateNode (protocol, sender, parameters, authentication, reply) {
+  async updateNode ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isNodeTokenValid(authentication.token)
     if (success) {
       const node = results[0]
@@ -232,7 +232,7 @@ module.exports = class Instance extends EventEmitter {
       }
     }
   }
-  async deleteNode (protocol, sender, parameters, authentication, reply) {
+  async deleteNode ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isNodeTokenValid(authentication.token)
     if (success) {
       const node = results[0]
@@ -251,7 +251,7 @@ module.exports = class Instance extends EventEmitter {
       }
     }
   }
-  async loginNode (protocol, sender, parameters, authentication, reply) {
+  async loginNode ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isNodeTokenValid(authentication.token)
     if (success) {
       const node = results[0]
@@ -272,13 +272,13 @@ module.exports = class Instance extends EventEmitter {
       })
     }
   }
-  logoutNode (protocol, sender) {
+  logoutNode ({ protocol, sender }) {
     this.online.nodes = this.online.nodes.filter(n => {
       return !(n.resource === sender && n.protocol === protocol)
     })
     this.emit('nodeDisconnects')
   }
-  async registerClient (protocol, sender, parameters, authentication, reply) {
+  async registerClient ({ protocol, sender, parameters, authentication, reply }) {
     let token = randomstring.generate(5) + Date.now()
     const success = await this.models.client.create({
       token: token,
@@ -301,7 +301,7 @@ module.exports = class Instance extends EventEmitter {
       token: token
     })
   }
-  async updateClient (protocol, sender, parameters, authentication, reply) {
+  async updateClient ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isClientTokenValid(authentication.token)
     if (success) {
       const client = results[0]
@@ -320,7 +320,7 @@ module.exports = class Instance extends EventEmitter {
       }
     }
   }
-  async deleteClient (protocol, sender, parameters, authentication, reply) {
+  async deleteClient ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isClientTokenValid(authentication.token)
     if (success) {
       const client = results[0]
@@ -339,7 +339,7 @@ module.exports = class Instance extends EventEmitter {
       }
     }
   }
-  async loginClient (protocol, sender, parameters, authentication, reply) {
+  async loginClient ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isClientTokenValid(authentication.token)
     if (success) {
       const client = results[0]
@@ -358,7 +358,7 @@ module.exports = class Instance extends EventEmitter {
       })
     }
   }
-  logoutClient (protocol, sender) {
+  logoutClient ({ protocol, sender }) {
     this.online.clients = this.online.clients.filter(n => {
       return !(n.resource === sender && n.protocol === protocol)
     })

@@ -32,20 +32,25 @@ class WebSockets {
     let resourceId = resource.id
     resource.on(channel, data => {
       if (!action || data.action === action) {
-        callback(
-          this.ID,
-          resourceId,
-          data.parameters,
-          data.authentication,
-          (parameters) => this.to(resourceId, response ? response.channel : null, response ? response.action : null, parameters, { listen: null, resource }),
-          { recipientObject: data.recipient, action: data.action }
-        )
+        const callbackArguments = {
+          protocol: this.ID,
+          sender: resourceId,
+          parameters: data.parameters,
+          authentication: data.authentication,
+          reply: (parameters) => this.to(resourceId, response ? response.channel : null, response ? response.action : null, parameters, { listen: null, resource }),
+          forwardObject: { recipientObject: data.recipient, action: data.action }
+        }
+        callback(callbackArguments)
       }
     })
   }
   disconnect (callback) {
     this.resource.on('connection', socket => {
-      socket.on('disconnect', () => callback(this.ID, socket.id))
+      const callbackArguments = {
+        protocol: this.ID,
+        sender: socket.id
+      }
+      socket.on('disconnect', () => callback(callbackArguments))
     })
   }
   loadListeners (bindings) {

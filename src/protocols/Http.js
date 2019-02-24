@@ -32,17 +32,14 @@ class Http {
   on (channel, action, resource, callback, response) {
     resource.onGet('/' + channel + '/' + action, (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      callback(
-        this.ID,
-        this.getHostFromRequest(req),
-        req.params,
-        req.headers.Authentication,
-        (parameters) => res.end(JSON.stringify({
-          channel: response.channel,
-          action: response.action,
-          parameters: parameters
-        }))
-      )
+      const callbackArguments = {
+        protocol: this.ID,
+        resource: this.getHostFromRequest(req),
+        parameters: req.params,
+        authentication: req.headers.Authentication,
+        reply: (parameters) => res.end(JSON.stringify({ channel: response.channel, action: response.action, parameters: parameters }))
+      }
+      callback(callbackArguments)
     })
   }
   disconnect () {}
