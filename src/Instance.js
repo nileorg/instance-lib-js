@@ -3,6 +3,7 @@ const randomstring = require('randomstring')
 const Db = require('./Db')
 const Node = require('./models/Node')
 const Client = require('./models/Client')
+const Queue = require('./models/Queue')
 
 module.exports = class Instance extends EventEmitter {
   constructor (protocols, db, ddbms) {
@@ -12,7 +13,8 @@ module.exports = class Instance extends EventEmitter {
     this.ddbms = ddbms
     this.models = {
       node: new Node(this.db),
-      client: new Client(this.db)
+      client: new Client(this.db),
+      queue: new Queue(this.db)
     }
     this.online = {
       nodes: [],
@@ -133,7 +135,9 @@ module.exports = class Instance extends EventEmitter {
       this.protocols[onlineRecipient.protocol].to(onlineRecipient.resource, senderType + '.to.' + recipientType, forwardObject.action, parameters, null, resource)
       reply({ success: true, type: 'forward' })
     } else {
-      const { success, results } = await this.db.run(` SELECT resource FROM ${recipientType}s where ${recipientType}_id = ?`, forwardObject.recipientObject.recipient)
+      const { success, results } = await this.models[recipientType].getById({
+        primaryKey: forwardObject.recipientObject.recipient
+      })
       if (success) {
         let resource = results[0].resource
         const [, recipientProtocol] = resource.match(/(^\w+):\/\/(.+)/)
@@ -145,11 +149,11 @@ module.exports = class Instance extends EventEmitter {
           parameters.token = ''
           if (success) {
             const entity = results[0]
-            const { success } = await this.db.run(`
-              INSERT INTO queue 
-                (sender, recipient, message)
-              VALUES
-                (?, ?, ?)`, [entity[senderType + '_id'], forwardObject.recipientObject.recipient, JSON.stringify(parameters)])
+            const success = await this.models.queue.create({
+              sender: entity[senderType + '_id'],
+              recipient: forwardObject.recipientObject.recipient,
+              message: JSON.stringify(parameters)
+            })
             if (success) {
               reply({ success: true, type: 'queue' })
             }
