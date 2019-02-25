@@ -253,18 +253,21 @@ module.exports = class Instance extends EventEmitter {
   }
   async loginNode ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isNodeTokenValid(authentication.token)
+    const res = results
     if (success) {
-      const node = results[0]
+      const node = res[0]
       this.online.nodes.push({
         components: node.components,
         id: node.node_id,
         resource: sender,
         protocol: protocol
       })
+      const { results } = await this.models.queue.getByRecipientId({ recipientId: node.node_id })
       reply({
         success: true,
         components: node.components,
-        id: node.node_id
+        id: node.node_id,
+        queue: results
       })
     } else {
       reply({
@@ -341,16 +344,19 @@ module.exports = class Instance extends EventEmitter {
   }
   async loginClient ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isClientTokenValid(authentication.token)
+    const res = results
     if (success) {
-      const client = results[0]
+      const client = res[0]
       this.online.clients.push({
         id: client.client_id,
         resource: sender,
         protocol: protocol
       })
+      const { results } = await this.models.queue.getByRecipientId({ recipientId: client.client_id })
       reply({
         success: true,
-        id: client.client_id
+        id: client.client_id,
+        queue: results
       })
     } else {
       reply({

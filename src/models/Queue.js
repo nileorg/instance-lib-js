@@ -20,6 +20,9 @@ module.exports = class Queue {
   async getById ({ primaryKey }) {
     return this.db.run('SELECT * FROM queue WHERE queue_id = ?', [primaryKey])
   }
+  async getByRecipientId ({ recipientId }) {
+    return this.db.run('SELECT * FROM queue WHERE recipient = ?', [recipientId])
+  }
   async delete ({ queueId }) {
     const { success } = await this.db.run('DELETE FROM queue WHERE queue_id = ?', [queueId])
     return success

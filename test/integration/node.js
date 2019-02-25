@@ -251,17 +251,39 @@ describe('Node Integration Test', function () {
   })
   it('Should forward a message from client to an offline node through instance, saving the message in the queue', function (done) {
     let tokenNode
+    let tokenClient
+    function loginClient () {
+      socket.once('instance.to.client', res => {
+        assertResponse(res, 'logged')
+        const message = JSON.parse(res.parameters.queue[0].message)
+        expect(message, 'Message not correctly saved in queue').to.have.property(
+          'test',
+          'test1'
+        )
+        done()
+      })
+      socket.emit('client.to.instance', {
+        action: 'login',
+        authentication: {
+          token: tokenClient
+        }
+      })
+    }
     function registerClient () {
       socketClient.once('instance.to.client', res => {
         assertResponse(res, 'registerConfirm')
+        tokenClient = res.parameters.token
         socket.once('instance.to.node', res => {
           assertResponse(res, 'forwarded')
-          done()
+          loginClient()
         })
         socket.emit('node.to.client', {
           action: 'test',
           recipient: {
             recipient: res.parameters.id
+          },
+          parameters: {
+            test: 'test1'
           },
           authentication: {
             token: tokenNode
