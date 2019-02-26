@@ -1,8 +1,8 @@
 {
-  "name": "nile-local-instance",
+  "name": "instance-lib-js",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./src/module.js",
   "scripts": {
     "start": "node src/index.js",
     "test": "standard && mocha --recursive",
@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nileorg/nile-local-instance.git"
+    "url": "git+https://github.com/nileorg/instance-lib-js.git"
   },
   "author": "Marco Castignoli",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/nileorg/nile-local-instance/issues"
+    "url": "https://github.com/nileorg/instance-lib-js/issues"
   },
-  "homepage": "https://github.com/nileorg/nile-local-instance#readme",
+  "homepage": "https://github.com/nileorg/instance-lib-js#readme",
   "dependencies": {
     "http": "0.0.0",
     "httpdispatcher": "^2.1.2",
