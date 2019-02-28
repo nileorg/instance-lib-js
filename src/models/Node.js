@@ -43,4 +43,13 @@ module.exports = class Node {
     const { success } = await this.db.run('DELETE FROM nodes WHERE node_id = ?', [nodeId])
     return success
   }
+  async updateStatus ({ active, nodeId }) {
+    const { success } = await this.db.run(`
+      UPDATE nodes
+      SET 
+        active: ?
+      WHERE node_id = ?
+    `, [active, nodeId])
+    return success
+  }
 }
