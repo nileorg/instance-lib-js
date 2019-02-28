@@ -2,6 +2,9 @@ module.exports = class Node {
   constructor (db) {
     this.db = db
   }
+  async get () {
+    return this.db.run('SELECT * FROM nodes', [])
+  }
   async create ({ token, components, information, resource }) {
     const { success } = await this.db.run(`
         INSERT INTO nodes (
