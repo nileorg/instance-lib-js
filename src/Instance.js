@@ -195,6 +195,7 @@ module.exports = class Instance extends EventEmitter {
       await this.ddbms[ddbms].save(components).catch(e => {})
       const { success, results } = await this.isNodeTokenValid(token)
       if (success) {
+        this.publishNodesList()
         reply({ success: true, token: token, id: results[0].node_id })
       } else {
         reply({ success: false })
@@ -207,6 +208,21 @@ module.exports = class Instance extends EventEmitter {
     return this.models.node.getByToken({
       token: token
     })
+  }
+  async publishNodesList () {
+    const { success, results } = await this.models.node.get()
+    if (success) {
+      let nodesList = results.reduce((object, node) => {
+        node.token = null
+        node.information1 = JSON.parse(node.information)
+        object[node.node_id] = node
+        return object
+      }, {})
+      const hash = await this.ddbms.ipfs.add(nodesList)
+      return hash
+    } else {
+      return false
+    }
   }
   async updateNode ({ protocol, sender, parameters, authentication, reply }) {
     const { success, results } = await this.isNodeTokenValid(authentication.token)
