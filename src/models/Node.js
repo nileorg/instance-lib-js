@@ -47,7 +47,7 @@ module.exports = class Node {
     const { success } = await this.db.run(`
       UPDATE nodes
       SET 
-        active: ?
+        active = ?
       WHERE node_id = ?
     `, [active, nodeId])
     return success
